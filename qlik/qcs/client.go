@@ -146,6 +146,7 @@ func (c *Client) GetRawUrl(rawUrl string) (*http.Response, []byte, *util.Result)
 	if res != nil {
 		return nil, nil, res.With("NewRawRequest")
 	}
+	c.client.AddQlikOptions(req)
 	return c.Do(req)
 }
 
