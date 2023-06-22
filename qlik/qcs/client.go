@@ -138,7 +138,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, []byte, *util.Result) {
 }
 
 func (c *Client) Get(endpoint string, params map[string]string) (*http.Response, []byte, *util.Result) {
-	return c.client.Do(http.MethodGet, endpoint, rac.WithParams(params))
+	return c.client.Do(http.MethodGet, endpoint, nil, rac.WithParams(params))
 }
 
 func (c *Client) GetRawUrl(rawUrl string) (*http.Response, []byte, *util.Result) {
