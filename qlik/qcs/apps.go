@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path"
 	"strings"
 
 	"github.com/soderasen-au/go-qlik/qlik/rac"
@@ -94,6 +96,55 @@ func (c *Client) Import(binPath, appId, appName, spaceId string, skipData bool) 
 
 	c.Logger().Info().Msgf("%s is imported to cloud as %s", binPath, app.Attributes.ID)
 	return &app, nil
+}
+
+func (c *Client) Export(id, dstFolder string, skipData bool) (string, *util.Result) {
+	endpoint := fmt.Sprintf("apps/%s/export", id)
+	s := "true"
+	if !skipData {
+		s = "false"
+	}
+	resp, _, res := c.client.Do(http.MethodPost, endpoint, nil, rac.WithParam("NoData", s))
+	if res != nil {
+		return "", res.With("PostAppExport")
+	}
+	downloadPath := resp.Header.Get("Location")
+	if downloadPath == "" {
+		return "", util.MsgError("ParseExportResponse", "No download location")
+	}
+
+	endpoint = rac.GetRootPath(downloadPath)
+	resp, fileData, res := c.client.Do(http.MethodGet, endpoint, nil)
+	if res != nil {
+		return "", res.With("DownloadFile: " + downloadPath)
+	}
+	disposition := resp.Header.Get("Content-Disposition")
+	dispositions := strings.Split(disposition, ";")
+	filename := ""
+	for _, d := range dispositions {
+		d = strings.TrimSpace(d)
+		if strings.HasPrefix(strings.ToLower(d), "filename=") {
+			filename = strings.Trim(d[9:], "\"")
+		}
+	}
+	if filename == "" {
+		filename = "downloadApp.qvf"
+	}
+
+	_ = util.MaybeCreate(dstFolder)
+	dstPath := path.Join(dstFolder, filename)
+	file, err := os.Create(dstPath)
+	if err != nil {
+		return "", util.Error("create local file", err)
+	}
+	defer file.Close()
+
+	_, err = file.Write(fileData)
+	if err != nil {
+		return "", util.Error("Write file", err)
+	}
+
+	return filename, nil
 }
 
 func (c *Client) MakeSheetsPublic(appid string) *util.Result {
