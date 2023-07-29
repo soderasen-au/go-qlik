@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Click-CI/common/crypto"
-	"github.com/Click-CI/common/loggers"
 	"github.com/rs/zerolog"
+	"github.com/soderasen-au/go-common/crypto"
+	"github.com/soderasen-au/go-common/loggers"
 	"github.com/soderasen-au/go-qlik/qlik"
 )
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Click-CI/common/crypto"
+	"github.com/soderasen-au/go-common/crypto"
 	"github.com/soderasen-au/go-qlik/qlik"
 )
 

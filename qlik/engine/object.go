@@ -5,7 +5,7 @@ import (
 	"github.com/qlik-oss/enigma-go/v3"
 	"sync"
 
-	"github.com/Click-CI/common/util"
+	"github.com/soderasen-au/go-common/util"
 )
 
 var (

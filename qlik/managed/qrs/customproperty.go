@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Click-CI/common/util"
+	"github.com/soderasen-au/go-common/util"
 )
 
 // CustomPropertyDefinitionCondensed is used to decribe Qlik Sense CustomPropertyDefinition in Condensed format

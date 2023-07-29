@@ -14,11 +14,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Click-CI/common/loggers"
+	"github.com/soderasen-au/go-common/loggers"
 	"github.com/soderasen-au/go-qlik/qlik"
 
-	"github.com/Click-CI/common/util"
 	"github.com/rs/zerolog"
+	"github.com/soderasen-au/go-common/util"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/qlik-oss/enigma-go/v3"
 
-	"github.com/Click-CI/common/util"
+	"github.com/soderasen-au/go-common/util"
 )
 
 type NxMeta struct {

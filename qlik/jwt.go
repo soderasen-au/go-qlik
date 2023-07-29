@@ -3,9 +3,9 @@ package qlik
 import (
 	"crypto/rsa"
 	"fmt"
-	"github.com/Click-CI/common/util"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/soderasen-au/go-common/util"
 	"time"
 )
 

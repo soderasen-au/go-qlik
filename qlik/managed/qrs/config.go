@@ -1,7 +1,7 @@
 package qrs
 
 import (
-	"github.com/Click-CI/common/util"
+	"github.com/soderasen-au/go-common/util"
 	"github.com/soderasen-au/go-qlik/qlik"
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"github.com/soderasen-au/go-qlik/qlik/rac"

@@ -6,8 +6,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/Click-CI/common/util"
 	"github.com/gocarina/gocsv"
+	"github.com/soderasen-au/go-common/util"
 )
 
 type (

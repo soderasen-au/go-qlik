@@ -3,7 +3,7 @@ package rac
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/Click-CI/common/util"
+	"github.com/soderasen-au/go-common/util"
 	"io"
 	"net/http"
 	"path"

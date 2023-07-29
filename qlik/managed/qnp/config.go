@@ -1,8 +1,8 @@
 package qnp
 
 import (
-	"github.com/Click-CI/common/crypto"
-	"github.com/Click-CI/common/util"
+	"github.com/soderasen-au/go-common/crypto"
+	"github.com/soderasen-au/go-common/util"
 	"github.com/soderasen-au/go-qlik/qlik"
 )
 

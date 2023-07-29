@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Click-CI/common/loggers"
 	"github.com/qlik-oss/enigma-go/v3"
+	"github.com/soderasen-au/go-common/loggers"
 	"reflect"
 	"sync"
 
-	"github.com/Click-CI/common/util"
+	"github.com/soderasen-au/go-common/util"
 )
 
 func GetCurrentSelection(doc *enigma.Doc, stateName string) (*enigma.SelectionObject, *util.Result) {

@@ -3,7 +3,7 @@ package qnp
 import (
 	"encoding/json"
 
-	"github.com/Click-CI/common/util"
+	"github.com/soderasen-au/go-common/util"
 )
 
 type (

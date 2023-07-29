@@ -3,8 +3,8 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Click-CI/common/util"
 	"github.com/qlik-oss/enigma-go/v3"
+	"github.com/soderasen-au/go-common/util"
 )
 
 var SessionBookmarkListDef = []byte(`

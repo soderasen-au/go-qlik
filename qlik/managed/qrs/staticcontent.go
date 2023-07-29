@@ -10,7 +10,7 @@ import (
 
 	"github.com/soderasen-au/go-qlik/qlik/rac"
 
-	"github.com/Click-CI/common/util"
+	"github.com/soderasen-au/go-common/util"
 )
 
 type StaticContentReferenceCondensed struct {
