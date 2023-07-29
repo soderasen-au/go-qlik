@@ -3,13 +3,13 @@ module github.com/soderasen-au/go-qlik
 go 1.20
 
 require (
-	github.com/Click-CI/common v0.3.0
 	github.com/eventials/go-tus v0.0.0-20220610120217-05d0564bb571
 	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/google/uuid v1.3.0
 	github.com/qlik-oss/enigma-go/v3 v3.7.0
 	github.com/rs/zerolog v1.29.1
+	github.com/soderasen-au/go-common v0.2.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
