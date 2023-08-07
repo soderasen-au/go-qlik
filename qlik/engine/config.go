@@ -49,32 +49,25 @@ type Config struct {
 func (cfg *Config) QCSEngineURIAppendAppID(appid string) *util.Result {
 	cfg.AppID = appid
 
-	//if !cfg.IsCloud() {
-	//	return nil
-	//}
-
-	if cfg.AppID == "" && cfg.IsCloud() {
-		return util.MsgError("parse engine uri", "no appid for cloud engine")
-	}
-
 	uri, err := url.Parse(cfg.EngineURI)
 	if err != nil {
 		return util.Error("parse engine uri", err)
 	}
-
 	if strings.HasSuffix(uri.Path, appid) {
 		return nil
+	}
+
+	if cfg.AppID == "" && cfg.IsCloud() {
+		return util.MsgError("parse engine uri", "no appid for cloud engine")
 	}
 
 	_, file := path.Split(uri.Path)
 	if file != "app" {
 		uri.Path = path.Join(uri.Path, "app")
 	}
-
 	if cfg.IsDesktop() {
 		appid = url.PathEscape(appid)
 	}
-
 	uri.Path = path.Join(uri.Path, appid)
 
 	if cfg.RandomProxySession {

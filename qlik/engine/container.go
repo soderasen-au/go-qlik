@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/qlik-oss/enigma-go/v3"
+import "github.com/qlik-oss/enigma-go/v4"
 
 type ContainerChildInfo struct {
 	ContainerChildId string `json:"containerChildId,omitempty"`
