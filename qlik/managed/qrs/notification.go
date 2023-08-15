@@ -91,6 +91,20 @@ type ChangeEvent struct {
 	SchemaPath          string     `json:"schemaPath,omitempty"`
 }
 
+func (e ChangeEvent) IsAppReload() bool {
+	if e.OriginatorContextID == "" || e.ChangeType.String() != "Update" || strings.ToLower(e.ObjectType) != "app" {
+		return false
+	}
+
+	reloadTimeChanged := false
+	for _, p := range e.ChangedProperties {
+		if p == "lastReloadTime" {
+			reloadTimeChanged = true
+		}
+	}
+	return reloadTimeChanged
+}
+
 type ChangeEvents []ChangeEvent
 
 func (c *Client) Subscribe(sub Subscription) (string, *util.Result) {
@@ -119,7 +133,7 @@ type NotiSubscriber struct {
 	StopNotiSubscriber  chan bool
 	SubscriptionHandles []string
 	client              *Client
-	Logger              *zerolog.Logger
+	logger              *zerolog.Logger
 }
 
 func NewNotiSubscriber(cfg Config, subs []*Subscription) (*NotiSubscriber, *util.Result) {
@@ -127,7 +141,7 @@ func NewNotiSubscriber(cfg Config, subs []*Subscription) (*NotiSubscriber, *util
 		StopNotiSubscriber:  make(chan bool),
 		SubscriptionHandles: make([]string, 0),
 		client:              nil,
-		Logger:              loggers.NullLogger,
+		logger:              loggers.NullLogger,
 	}
 
 	var res *util.Result
@@ -141,27 +155,37 @@ func NewNotiSubscriber(cfg Config, subs []*Subscription) (*NotiSubscriber, *util
 			return nil, res.With(fmt.Sprintf("Sub[%d] is not valid", i))
 		}
 	}
+	ret.subs = subs
 
 	return ret, nil
 }
 
 func (a *NotiSubscriber) Subscribe() *util.Result {
-	a.Logger.Debug().Msgf("start to subscribe to %d subscriptions", len(a.subs))
+	a.logger.Debug().Msgf("start to subscribe to %d subscriptions", len(a.subs))
 	a.SubscriptionHandles = make([]string, 0)
 	for i, sub := range a.subs {
 		subId, res := a.client.Subscribe(*sub)
 		if res != nil {
-			a.Logger.Err(res).Msgf("subsciption[%d] failed", i)
+			a.logger.Err(res).Msgf("subsciption[%d] failed", i)
 			return res.With(fmt.Sprintf("Subscribe[%d]", i))
 		}
-		a.Logger.Debug().Msgf("subscription[%d] handle: %s", i, subId)
+		a.logger.Debug().Msgf("subscription[%d] handle: %s", i, subId)
 		a.SubscriptionHandles = append(a.SubscriptionHandles, subId)
 	}
 	return nil
 }
 
+func (a *NotiSubscriber) SetLogger(l *zerolog.Logger) {
+	a.logger = l
+	a.client.SetLogger(l)
+}
+
+func (a *NotiSubscriber) Logger() *zerolog.Logger {
+	return a.logger
+}
+
 func (a *NotiSubscriber) StartHealthCheckThread(timerSec int) {
-	a.Logger.Debug().Msg("start Notification Auditor")
+	a.logger.Debug().Msg("start QRS health check thread")
 	ticker := time.NewTicker(time.Duration(timerSec) * time.Second)
 
 	QrsIsDown := false
@@ -169,26 +193,26 @@ func (a *NotiSubscriber) StartHealthCheckThread(timerSec int) {
 		select {
 		case _, ok := <-a.StopNotiSubscriber:
 			if !ok {
-				a.Logger.Warn().Msgf("Notification Auditor stropped in invalid status")
+				a.logger.Warn().Msgf("Notification Subscriber stropped in invalid status")
 			}
-			a.Logger.Info().Msg("Notification Auditor stopped")
+			a.logger.Info().Msg("Notification Subscriber stopped")
 			return
 		case _ = <-ticker.C:
-			a.Logger.Debug().Msgf("QRS is down:? %v, checking health again ...", QrsIsDown)
+			a.logger.Trace().Msgf("QRS is down? (%v), checking health again ...", QrsIsDown)
 			_, res := a.client.About()
 			if res != nil {
-				a.Logger.Error().Msgf("QRS about failed %s ", res.Error())
+				a.logger.Error().Msgf("QRS About() failed %s ", res.Error())
 				QrsIsDown = true
 			}
 
 			if QrsIsDown {
-				a.Logger.Warn().Msgf("QRS is down, try to re-subscribe ...")
+				a.logger.Warn().Msgf("QRS is down, try to re-subscribe ...")
 				res = a.Subscribe()
 				if res != nil {
-					a.Logger.Err(res).Msg("re-subscribe failed, will try again later")
+					a.logger.Err(res).Msg("re-subscribe failed, will try again later")
 				} else {
 					QrsIsDown = false
-					a.Logger.Info().Msg("re-subscribe succeeded")
+					a.logger.Info().Msg("re-subscribe succeeded")
 				}
 			}
 		}
