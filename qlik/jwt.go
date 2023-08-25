@@ -55,8 +55,8 @@ func (p *CloudJwtClaim) GetJWT(privateKey *rsa.PrivateKey) (string, *util.Result
 // actually payload is still using userDirectory + userId
 type JwtClaim struct {
 	Name          *string `json:"name,omitempty" yaml:"name,omitempty" bson:"name,omitempty"`
-	UserID        *string `json:"user_id,omitempty" yaml:"user_id,omitempty" bson:"user_id,omitempty"`
-	UserDirectory *string `json:"user_directory,omitempty" yaml:"user_directory,omitempty" bson:"user_directory,omitempty"`
+	UserID        *string `json:"userId,omitempty" yaml:"userId,omitempty" bson:"userId,omitempty"`
+	UserDirectory *string `json:"userDirectory,omitempty" yaml:"userDirectory,omitempty" bson:"userDirectory,omitempty"`
 	Email         *string `json:"email,omitempty" yaml:"email,omitempty" bson:"email,omitempty"`
 	jwt.RegisteredClaims
 }
