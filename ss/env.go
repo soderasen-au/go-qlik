@@ -178,3 +178,13 @@ func (env *ExecEnv) GetMasterItemsMap() *util.Result {
 	}
 	return nil
 }
+
+func (env *ExecEnv) GetMeasureByName(name string) (*engine.SessionMeasureLayout, bool) {
+	l, ok := env.measures[name]
+	return l, ok
+}
+
+func (env *ExecEnv) GetDimensionByName(name string) (*engine.SessionDimensionLayout, bool) {
+	l, ok := env.dims[name]
+	return l, ok
+}
