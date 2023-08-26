@@ -37,8 +37,8 @@ type Config struct {
 	QRSBaseURI         string              `json:"qrs_base_uri,omitempty" yaml:"qrs_base_uri,omitempty" bson:"qrs_base_uri,omitempty"` //if ServerType is ST_CLOUD, this field is base URL of the QCS tenant e.g. https://tenant.eu.qlikcloud.com
 	HubURI             *HubUri             `json:"hub_uri,omitempty" yaml:"hub_uri,omitempty" bson:"hub_uri,omitempty"`
 	SharedFolderRoot   *string             `json:"shared_folder_root,omitempty" yaml:"shared_folder_root,omitempty" bson:"shared_folder_root,omitempty"` //QSEoK shared folder which contains: `Apps`, `StaticContent` etc.
-	UserName           string              `json:"user_id,omitempty" yaml:"user_id,omitempty" bson:"user_name,omitempty"`
-	UserDirectory      string              `json:"user_ad,omitempty" yaml:"user_ad,omitempty" bson:"user_directory,omitempty"`
+	UserName           string              `json:"user_id,omitempty" yaml:"user_id,omitempty" bson:"user_id,omitempty"`
+	UserDirectory      string              `json:"user_directory,omitempty" yaml:"user_directory,omitempty" bson:"user_directory,omitempty"`
 	AuthMode           AuthMethod          `json:"auth_mode,omitempty" yaml:"auth_mode,omitempty" bson:"auth_mode,omitempty"`
 	ServerType         ServerType          `json:"server_type,omitempty" yaml:"server_type,omitempty" bson:"server_type,omitempty"`
 	JWT                string              `json:"jwt,omitempty" yaml:"jwt,omitempty" bson:"jwt,omitempty"`

@@ -66,32 +66,6 @@ func GetListObject(doc *enigma.Doc, stateName, fieldName string) (*enigma.ListOb
 	return sessObjLayout.ListObject, nil
 }
 
-func GetDimensionList(doc *enigma.Doc) (*DimensionList, *util.Result) {
-	prop := enigma.GenericObjectProperties{
-		Info: &enigma.NxInfo{Type: "DimensionList"},
-		DimensionListDef: &enigma.DimensionListDef{
-			Type: "dimension",
-			Data: json.RawMessage(SessionDimListDefData),
-		},
-	}
-	obj, err := doc.CreateSessionObject(ConnCtx, &prop)
-	if err != nil {
-		return nil, util.Error("CreateSessionObject", err)
-	}
-	layoutBuf, err := obj.GetLayoutRaw(ConnCtx)
-	if err != nil {
-		return nil, util.Error("GetLayoutRaw", err)
-	}
-
-	var layout SessionObjectLayout
-	err = json.Unmarshal(layoutBuf, &layout)
-	if err != nil {
-		return nil, util.Error("ParseLayout", err)
-	}
-
-	return layout.DimensionList, nil
-}
-
 func SetVariable(doc *enigma.Doc, name string, value string) error {
 	obj, err := doc.GetVariableByName(ConnCtx, name)
 	if err != nil {

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -58,7 +59,7 @@ func newJwtConn(cfg Config) (con *Conn, err error) {
 	headers := make(http.Header, 1)
 	headers.Set("Authorization", fmt.Sprintf("Bearer %s", cfg.JWT))
 
-	global, err := enigma.Dialer{}.Dial(ConnCtx, cfg.EngineURI, headers)
+	global, err := enigma.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}.Dial(ConnCtx, cfg.EngineURI, headers)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintln("Could not connect", err))
 	}

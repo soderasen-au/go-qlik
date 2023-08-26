@@ -19,6 +19,8 @@ type ExecEnv struct {
 	Doc        *enigma.Doc
 	bmMap      map[string]string
 	csOrder    map[string]int
+	dims       map[string]*engine.SessionDimensionLayout
+	measures   map[string]*engine.SessionMeasureLayout
 }
 
 // NewExecEnv Note: please call CleanUp() afterwards to close engine connection properly.
@@ -117,7 +119,7 @@ func (env *ExecEnv) GetBookmarkMap() *util.Result {
 			env.Log.Warn().Msgf("BM %s doesn't have title", bm.Info.Id)
 			continue
 		}
-		env.Log.Info().Msgf("Init BM: '%s' => %s", *bm.Meta.Title, bm.Info.Id)
+		env.Log.Debug().Msgf("Init BM: '%s' => %s", *bm.Meta.Title, bm.Info.Id)
 		env.bmMap[*bm.Meta.Title] = bm.Info.Id
 	}
 
@@ -144,4 +146,35 @@ func (env *ExecEnv) SyncBookmark(title string) (bool, *util.Result) {
 		}
 	}
 	return false, nil
+}
+
+func (env *ExecEnv) GetMasterItemsMap() *util.Result {
+	env.dims = make(map[string]*engine.SessionDimensionLayout)
+	list, res := engine.GetDimensionList(env.Doc)
+	if res != nil {
+		return res.With("GetDimensionList")
+	}
+	for _, m := range list {
+		if m.Meta.Title == nil {
+			env.Log.Warn().Msgf("dim %s doesn't have title", m.Info.Id)
+			continue
+		}
+		env.Log.Debug().Msgf("Init dim: '%s' => %s", *m.Meta.Title, m.Info.Id)
+		env.dims[*m.Meta.Title] = m
+	}
+
+	env.measures = make(map[string]*engine.SessionMeasureLayout)
+	mlist, res := engine.GetMeasureList(env.Doc)
+	if res != nil {
+		return res.With("GetDimensionList")
+	}
+	for _, m := range mlist {
+		if m.Meta.Title == nil {
+			env.Log.Warn().Msgf("measure %s doesn't have title", m.Info.Id)
+			continue
+		}
+		env.Log.Debug().Msgf("Init measure: '%s' => %s", *m.Meta.Title, m.Info.Id)
+		env.measures[*m.Meta.Title] = m
+	}
+	return nil
 }
