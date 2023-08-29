@@ -155,12 +155,8 @@ func (env *ExecEnv) GetMasterItemsMap() *util.Result {
 		return res.With("GetDimensionList")
 	}
 	for _, m := range list {
-		if m.Meta.Title == nil {
-			env.Log.Warn().Msgf("dim %s doesn't have title", m.Info.Id)
-			continue
-		}
-		env.Log.Debug().Msgf("Init dim: '%s' => %s", *m.Meta.Title, m.Info.Id)
-		env.dims[*m.Meta.Title] = m
+		env.Log.Debug().Msgf("Init dim: '%s' => %s", m.Info.Id, *m.Meta.Title)
+		env.dims[m.Info.Id] = m
 	}
 
 	env.measures = make(map[string]*engine.SessionMeasureLayout)
@@ -169,12 +165,8 @@ func (env *ExecEnv) GetMasterItemsMap() *util.Result {
 		return res.With("GetDimensionList")
 	}
 	for _, m := range mlist {
-		if m.Meta.Title == nil {
-			env.Log.Warn().Msgf("measure %s doesn't have title", m.Info.Id)
-			continue
-		}
-		env.Log.Debug().Msgf("Init measure: '%s' => %s", *m.Meta.Title, m.Info.Id)
-		env.measures[*m.Meta.Title] = m
+		env.Log.Debug().Msgf("Init measure: '%s' => %s", m.Info.Id, *m.Meta.Title)
+		env.measures[m.Info.Id] = m
 	}
 	return nil
 }
