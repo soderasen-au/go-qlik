@@ -9,11 +9,27 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type AppProperties struct {
+	CreatedDate  *string `json:"createdDate,omitempty"`
+	ModifiedDate *string `json:"modifiedDate,omitempty"`
+	enigma.NxAppProperties
+}
+
+func (p *AppProperties) RemoveVolatileFields() {
+	p.CreatedDate = nil
+	p.ModifiedDate = nil
+}
+
 type ObjectPropeties struct {
 	Info       *enigma.NxInfo     `json:"qInfo"`
 	Meta       *NxMeta            `json:"qMeta"`
 	Properties json.RawMessage    `json:"qProperties"`
 	ChildInfos []*ObjectPropeties `json:"qChildInfos"`
+}
+
+func (p *ObjectPropeties) RemoveVolatileFields() {
+	p.Meta.CreatedDate = nil
+	p.Meta.ModifiedDate = nil
 }
 
 func (p *ObjectPropeties) GetChild(id string) (*ObjectPropeties, bool) {

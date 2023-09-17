@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	PAGE_MAX_CELLS int = 4096
+	PAGE_MAX_CELLS int = 16384
 )
 
 func Paging(rect enigma.Rect) []*enigma.NxPage {

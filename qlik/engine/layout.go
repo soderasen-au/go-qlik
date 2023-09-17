@@ -83,14 +83,14 @@ type AppMeta struct {
 }
 type AppLayoutMeta struct {
 	ID                  string                   `json:"id,omitempty"`
-	CreatedDate         string                   `json:"createdDate,omitempty"`
+	CreatedDate         *string                  `json:"createdDate,omitempty"`
 	ModifiedDate        string                   `json:"modifiedDate,omitempty"`
 	Published           bool                     `json:"published"`
 	PublishTime         string                   `json:"publishTime,omitempty"`
 	Privileges          []string                 `json:"privileges,omitempty"`
 	DynamicColor        string                   `json:"dynamicColor,omitempty"`
 	Title               string                   `json:"qTitle,omitempty"`
-	FileName            string                   `json:"qFileName,omitempty"`
+	FileName            *string                  `json:"qFileName,omitempty"`
 	LastReloadTime      string                   `json:"qLastReloadTime,omitempty"`
 	Modified            bool                     `json:"qModified,omitempty"`
 	HasScript           bool                     `json:"qHasScript,omitempty"`
@@ -104,6 +104,11 @@ type AppLayoutMeta struct {
 	Thumbnail           *enigma.StaticContentUrl `json:"qThumbnail,omitempty"`
 	IsBDILiveMode       bool                     `json:"qIsBDILiveMode,omitempty"`
 	Prop                *enigma.NxAppProperties  `json:"qProp,omitempty"`
+}
+
+func (l *AppLayoutMeta) RemoveVolatileFields() {
+	l.FileName = nil
+	l.CreatedDate = nil
 }
 
 type ObjectChildEx struct {
