@@ -5,6 +5,8 @@ import (
 	"github.com/soderasen-au/go-qlik/qlik"
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"github.com/soderasen-au/go-qlik/qlik/rac"
+	"net/url"
+	"strings"
 )
 
 type Config struct {
@@ -13,11 +15,18 @@ type Config struct {
 }
 
 func NewConfigFromEngine(cfg engine.Config) *Config {
+	u, _ := url.Parse(cfg.QRSBaseURI)
+	var vp *string
+	parts := strings.Split(u.Path, "/")
+	if len(parts) == 2 && parts[0] != "" {
+		vp = util.Ptr(parts[0])
+	}
 	return &Config{
 		Config: rac.Config{
-			BaseUrl: cfg.QRSBaseURI,
-			IsCloud: util.Ptr(false),
-			//APIPrefix: util.Ptr("qrs"),
+			BaseUrl:      cfg.QRSBaseURI,
+			IsCloud:      util.Ptr(false),
+			APIPrefix:    util.Ptr("qrs"),
+			VirtualProxy: vp,
 			Auth: &rac.AuthConfig{
 				Method: rac.AuthMethodCert,
 				Xrf:    true,
