@@ -28,4 +28,15 @@ var (
 		"variable":  "DestroyVariableById",
 		"bookmark":  "DestroyBookmark",
 	}
+
+	ObjectListNameMap = map[string]string{
+		"AppObjectList": "AppObject",
+		"BookmarkList":  "Bookmark",
+		"connection":    "Connection",
+		"DimensionList": "Dimension",
+		"masterobject":  "MasterObject",
+		"MeasureList":   "Measure",
+		"story":         "Story",
+		"VariableList":  "Variable",
+	}
 )
