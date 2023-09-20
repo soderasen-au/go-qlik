@@ -42,18 +42,21 @@ func TestWalkApp_1(t *testing.T) {
 		t.Errorf("%s error: %s", "OpenDoc", err.Error())
 	}
 
-	objWalker := func(doc *enigma.Doc, listName string, item NxContainerEntry, _logger *zerolog.Logger) (*ObjectSnapshot, *util.Result) {
-		_logger.Info().Msgf(" - snapshot[%s] object[%s/%s]:", listName, item.Info.Type, item.Info.Id)
-		shot := ObjectSnapshot{
-			Info:        *item.Info,
-			Parent:      nil,
-			Title:       nil,
-			Description: nil,
-			Properties:  nil,
-			Digest:      "",
+	walkers := make(ListWalkFuncMap[ObjectSnapshot])
+	walkers[SHEET_LIST] = func(doc *enigma.Doc, item NxContainerEntry, _logger *zerolog.Logger) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
+		_logger.Info().Msgf(" - walk sheet object[%s/%s]:", item.Info.Type, item.Info.Id)
+		shot := ObjWalkResult[ObjectSnapshot]{
+			Info: item.Info,
+		}
+		return &shot, nil
+	}
+	walkers[ANY_LIST] = func(doc *enigma.Doc, item NxContainerEntry, _logger *zerolog.Logger) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
+		_logger.Info().Msgf(" - walk any object[%s/%s]:", item.Info.Type, item.Info.Id)
+		shot := ObjWalkResult[ObjectSnapshot]{
+			Info: item.Info,
 		}
 		return &shot, nil
 	}
 
-	WalkApp(doc, objWalker, logger)
+	WalkApp(doc, walkers, logger)
 }

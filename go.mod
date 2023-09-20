@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/qlik-oss/enigma-go/v4 v4.0.1
 	github.com/rs/zerolog v1.29.1
-	github.com/soderasen-au/go-common v0.4.2
+	github.com/soderasen-au/go-common v0.4.3
 	gopkg.in/yaml.v3 v3.0.1
 )
 

@@ -4,6 +4,13 @@ const (
 	MASTER_OBJECT string = "masterobject"
 	STORY         string = "story"
 	CONNECTION    string = "connection"
+
+	ANY_LIST     string = "AnyList"
+	SHEET_LIST   string = "AppObjectList"
+	BM_LIST      string = "BookmarkList"
+	DIM_LIST     string = "DimensionList"
+	MEASURE_LIST string = "MeasureList"
+	VAR_LIST     string = "VariableList"
 )
 
 var (

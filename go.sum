@@ -118,8 +118,8 @@ github.com/rs/zerolog v1.29.1/go.mod h1:Le6ESbR7hc+DP6Lt1THiV8CQSdkkNrd3R0XbEgp3
 github.com/sethgrid/pester v0.0.0-20190127155807-68a33a018ad0/go.mod h1:Ad7IjTpvzZO8Fl0vh9AzQ+j/jYZfyp2diGwI8m5q+ns=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
-github.com/soderasen-au/go-common v0.4.2 h1:XgeXGIw8qzzEHsPWG1428sV2rjFrXXUYXdtK2P5brU8=
-github.com/soderasen-au/go-common v0.4.2/go.mod h1:QLy9JIXNBOq7t/ktupgUdHcK7ubJneTRO0O3KUNDlFU=
+github.com/soderasen-au/go-common v0.4.3 h1:qWNBSUumLGu2ejSZjL//QlXvvjBMbJP4v5U++/JSF7I=
+github.com/soderasen-au/go-common v0.4.3/go.mod h1:QLy9JIXNBOq7t/ktupgUdHcK7ubJneTRO0O3KUNDlFU=
 github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf/go.mod h1:RJID2RhlZKId02nZ62WenDCkgHFerpIOmW0iT7GKmXM=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
