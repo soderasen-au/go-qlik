@@ -2,11 +2,10 @@ package engine
 
 import (
 	"encoding/json"
+
 	"github.com/qlik-oss/enigma-go/v4"
-
-	"github.com/soderasen-au/go-common/util"
-
 	"github.com/rs/zerolog"
+	"github.com/soderasen-au/go-common/util"
 )
 
 type AppProperties struct {

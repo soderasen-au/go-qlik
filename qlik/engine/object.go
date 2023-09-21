@@ -2,9 +2,9 @@ package engine
 
 import (
 	"fmt"
-	"github.com/qlik-oss/enigma-go/v4"
 	"sync"
 
+	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/soderasen-au/go-common/util"
 )
 

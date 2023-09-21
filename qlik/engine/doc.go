@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/qlik-oss/enigma-go/v4"
-	"github.com/soderasen-au/go-common/loggers"
 	"reflect"
 	"sync"
 
+	"github.com/qlik-oss/enigma-go/v4"
+	"github.com/soderasen-au/go-common/loggers"
 	"github.com/soderasen-au/go-common/util"
 )
 
