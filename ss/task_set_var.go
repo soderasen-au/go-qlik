@@ -2,9 +2,10 @@ package ss
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/soderasen-au/go-common/util"
 	"github.com/soderasen-au/go-qlik/qlik/engine"
-	"strings"
 )
 
 const CMD_NAME_SET_VAR = "set_var"

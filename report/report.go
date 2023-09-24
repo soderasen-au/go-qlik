@@ -20,6 +20,9 @@ const (
 
 	TARGET_OBJECTS string = "objects"
 	TARGET_SHEET   string = "sheet"
+
+	DRIVER_SENSE    string = "sense"
+	DRIVER_BUILT_IN string = "built_in"
 )
 
 func (f ReportFormat) IsExcel() bool {
@@ -73,6 +76,7 @@ type Report struct {
 	CurrentSelectionOrder  map[string]int    `json:"current_selection_order" yaml:"current_selection_order" bson:"current_selection_order"`
 
 	// output
+	Driver       *string       `json:"driver,omitempty" yaml:"driver,omitempty" bson:"driver,omitempty"`
 	OutputFormat *ReportFormat `json:"output_format,omitempty" yaml:"output_format,omitempty" bson:"output_format,omitempty"`
 	OutputFolder *string       `json:"output_folder,omitempty" yaml:"output_folder,omitempty" bson:"output_folder,omitempty"`
 	OutputOffset *enigma.Rect  `json:"output_offset,omitempty" yaml:"output_offset,omitempty" bson:"output_offset,omitempty"`

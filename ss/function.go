@@ -3,6 +3,7 @@ package ss
 import (
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/soderasen-au/go-common/util"
+	"github.com/soderasen-au/go-qlik/report"
 )
 
 type IFuncCmd interface {
@@ -14,6 +15,7 @@ type FuncCmdDef struct {
 	Target      string               `json:"target,omitempty" yaml:"target,omitempty"`
 	Args        []string             `json:"args,omitempty" yaml:"args,omitempty"`
 	FieldValues []*enigma.FieldValue `json:"field_values,omitempty" yaml:"field_values,omitempty"`
+	Report      *report.Report       `json:"report,omitempty" yaml:"report,omitempty"`
 }
 
 type MetaInfo struct {
@@ -22,6 +24,7 @@ type MetaInfo struct {
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
+// TODO: remove FuncCmdBase and use MetaInfo directly
 type FuncCmdBase struct {
 	MetaInfo `json:",inline" yaml:",inline"`
 

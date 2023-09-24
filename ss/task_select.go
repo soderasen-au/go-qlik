@@ -2,10 +2,11 @@ package ss
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/soderasen-au/go-common/util"
 	"github.com/soderasen-au/go-qlik/qlik/engine"
-	"strings"
 )
 
 const CMD_NAME_SELECT = "select"

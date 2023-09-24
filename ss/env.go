@@ -2,36 +2,48 @@ package ss
 
 import (
 	"fmt"
-	"github.com/qlik-oss/enigma-go/v4"
 	"path/filepath"
 	"time"
 
+	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/rs/zerolog"
 	"github.com/soderasen-au/go-common/loggers"
 	"github.com/soderasen-au/go-common/util"
 	"github.com/soderasen-au/go-qlik/qlik/engine"
+	"github.com/soderasen-au/go-qlik/qlik/managed/qrs"
 )
 
 type ExecEnv struct {
 	EngineConn *engine.Conn
+	Doc        *enigma.Doc
+	qrsClient  *qrs.Client
 	AppID      string
 	Log        *zerolog.Logger `json:"-"`
-	Doc        *enigma.Doc
 	bmMap      map[string]string
 	csOrder    map[string]int
 	dims       map[string]*engine.SessionDimensionLayout
 	measures   map[string]*engine.SessionMeasureLayout
 }
 
+type ExecEnvOption func(env *ExecEnv) *ExecEnv
+
+func WithQrsClient(c *qrs.Client) ExecEnvOption {
+	return func(env *ExecEnv) *ExecEnv {
+		env.qrsClient = c
+		return env
+	}
+}
+
 // NewExecEnv Note: please call CleanUp() afterwards to close engine connection properly.
 // Script.Run() calls CleanUp() automatically
-func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger) (*ExecEnv, *util.Result) {
+func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts ...ExecEnvOption) (*ExecEnv, *util.Result) {
 	res := cfg.QCSEngineURIAppendAppID(appid)
 	if res != nil {
 		return nil, res.With("AppendAppID")
 	}
 
 	env := new(ExecEnv)
+
 	conn, err := engine.NewConn(*cfg)
 	if err != nil {
 		return nil, util.Error("NewConn", err)
@@ -57,6 +69,12 @@ func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger) (*Exec
 	}
 
 	env.csOrder = make(map[string]int)
+
+	if opts != nil {
+		for _, opt := range opts {
+			env = opt(env)
+		}
+	}
 
 	return env, nil
 }
