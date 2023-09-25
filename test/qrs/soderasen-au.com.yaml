@@ -1,0 +1,16 @@
+base_url: https://soderasen-au.com
+is_cloud: false
+virtual_proxy: jwt
+api_prefix: qrs
+auth:
+  method: jwt
+  user:
+    userId: administrator
+    userDirectory: soderasen-au-qs
+  certs:
+    client: \\SODERASEN-AU-PC\certs\soderasen-au.com\qlik\jwt_cert.pem
+    client_key: \\SODERASEN-AU-PC\certs\soderasen-au.com\qlik\jwt_key.pem
+extra_tls_config:
+  insecure_skip_verify: true
+timeout_sec: 300
+log_file_name: "qrs.log"

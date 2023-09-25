@@ -424,3 +424,19 @@ func (c *Client) ChangeAppOwner(appId, userId string) *util.Result {
 
 	return nil
 }
+
+func (c *Client) Copy(appId, newName string) (*App, *util.Result) {
+	endpoint := fmt.Sprintf("/app/%s/copy", appId)
+	buf, res := c.Post(endpoint, nil, rac.WithParam("name", newName))
+	if res != nil {
+		return nil, res.With("Post")
+	}
+
+	var newApp App
+	err := json.Unmarshal(buf, &newApp)
+	if err != nil {
+		return nil, util.Error("ParseNewApp", err)
+	}
+
+	return &newApp, nil
+}
