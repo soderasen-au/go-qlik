@@ -2,6 +2,7 @@ package ss
 
 import (
 	"fmt"
+	"github.com/soderasen-au/go-qlik/qlik/managed/qrs"
 
 	"github.com/soderasen-au/go-common/util"
 	"github.com/soderasen-au/go-qlik/report"
@@ -23,7 +24,7 @@ func (t *ReportTask) Run() *util.Result {
 	var printer report.IReportPrinter
 	if t.Report.Driver != nil {
 		if *t.Report.Driver == report.DRIVER_SENSE {
-			printer = report.NewSenseReportPrinter(t.Script.Env.qrsClient)
+			printer = report.NewSenseReportPrinter(t.Script.Env.QrsClient)
 		} else {
 			return util.LogMsgError(t.Logger, "load driver", "unsupported driver: "+*t.Report.Driver)
 		}
@@ -58,7 +59,18 @@ func NewReportTask(s *Script, d *FuncCmdDef, n string) (TaskRunner, *util.Result
 		return nil, res.With(t.Name + "::ValidateTaskBase")
 	}
 
-	t.Report.AppId = *s.AppID
+	if t.Report.AppId == "" {
+		dupAppId, ok := t.Script.Env.Unstash(CMD_NAME_DUPLICATE)
+		if !ok {
+			return nil, util.MsgError(t.Name+"::Validate", "there's no duplicated app to "+CMD_NAME_REPORT)
+		}
+		dupApp, ok := dupAppId.(*qrs.App)
+		if !ok {
+			return nil, util.MsgError(t.Name+"::Validate", "duplicated app has wrong type in stash ")
+		}
+		t.Logger.Info().Msgf("use duplicated app: %s to %s", dupApp.ID, CMD_NAME_REPORT)
+		t.Report.AppId = dupApp.ID
+	}
 	t.Report.Doc = s.Env.Doc
 
 	t.Report.CurrentSelectionOrder = make(map[string]int)

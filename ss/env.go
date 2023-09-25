@@ -16,20 +16,21 @@ import (
 type ExecEnv struct {
 	EngineConn *engine.Conn
 	Doc        *enigma.Doc
-	qrsClient  *qrs.Client
+	QrsClient  *qrs.Client
 	AppID      string
 	Log        *zerolog.Logger `json:"-"`
 	bmMap      map[string]string
 	csOrder    map[string]int
 	dims       map[string]*engine.SessionDimensionLayout
 	measures   map[string]*engine.SessionMeasureLayout
+	stash      map[string]interface{}
 }
 
 type ExecEnvOption func(env *ExecEnv) *ExecEnv
 
 func WithQrsClient(c *qrs.Client) ExecEnvOption {
 	return func(env *ExecEnv) *ExecEnv {
-		env.qrsClient = c
+		env.QrsClient = c
 		return env
 	}
 }
@@ -44,31 +45,31 @@ func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts .
 
 	env := new(ExecEnv)
 
-	conn, err := engine.NewConn(*cfg)
-	if err != nil {
-		return nil, util.Error("NewConn", err)
-	}
-	env.EngineConn = conn
-
-	env.AppID = appid
-
 	if logger == nil {
 		_ = env.CreateLogger()
 	} else {
 		env.Log = logger
 	}
 
-	env.Doc, err = env.EngineConn.Global.OpenDoc(engine.ConnCtx, env.AppID, "", "", "", false)
-	if err != nil {
-		return nil, util.Error("OpenDoc", err)
-	}
-
-	res = env.GetBookmarkMap()
-	if res != nil {
-		return nil, res.With("GetBookmarkMap")
+	if appid != "" {
+		conn, err := engine.NewConn(*cfg)
+		if err != nil {
+			return nil, util.Error("NewConn", err)
+		}
+		env.EngineConn = conn
+		env.AppID = appid
+		env.Doc, err = env.EngineConn.Global.OpenDoc(engine.ConnCtx, env.AppID, "", "", "", false)
+		if err != nil {
+			return nil, util.Error("OpenDoc", err)
+		}
+		res = env.GetBookmarkMap()
+		if res != nil {
+			return nil, res.With("GetBookmarkMap")
+		}
 	}
 
 	env.csOrder = make(map[string]int)
+	env.stash = make(map[string]interface{})
 
 	if opts != nil {
 		for _, opt := range opts {
@@ -197,4 +198,13 @@ func (env *ExecEnv) GetMeasureByName(name string) (*engine.SessionMeasureLayout,
 func (env *ExecEnv) GetDimensionByName(name string) (*engine.SessionDimensionLayout, bool) {
 	l, ok := env.dims[name]
 	return l, ok
+}
+
+func (env *ExecEnv) Stash(key string, v interface{}) {
+	env.stash[key] = v
+}
+
+func (env *ExecEnv) Unstash(key string) (interface{}, bool) {
+	v, ok := env.stash[key]
+	return v, ok
 }
