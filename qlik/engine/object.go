@@ -179,3 +179,44 @@ func GetHyperCubePivotData(obj *enigma.GenericObject, sz enigma.Size) ([]*enigma
 
 	return dataPages, nil
 }
+
+func CapSize(sz *enigma.Size, cap enigma.Size) {
+	if cap.Cy > 0 && cap.Cy < sz.Cy {
+		sz.Cy = cap.Cy
+	}
+	if cap.Cx > 0 && cap.Cx < sz.Cx {
+		sz.Cx = cap.Cx
+	}
+}
+
+// sz contains size cap when get hypercube data
+// if sz.Cx or sz.Cy is greater than 0, it sets upper limit of column/row to get
+func GetHyperCube(obj *enigma.GenericObject, sz enigma.Size) (*enigma.HyperCube, *util.Result) {
+	layout, err := obj.GetLayout(ConnCtx)
+	if err != nil {
+		return nil, util.Error("GetLayout", err)
+	}
+
+	cube := layout.HyperCube
+	if cube != nil {
+		cappedSize := cube.Size
+		if cappedSize != nil && cappedSize.Cx > 0 && cappedSize.Cy > 0 {
+			CapSize(cappedSize, sz)
+			if cube.Mode == "P" || cube.Mode == "K" {
+				pivotPages, res := GetHyperCubePivotData(obj, *cappedSize)
+				if res != nil {
+					return nil, res.With("GetHyperCubePivotData")
+				}
+				cube.PivotDataPages = pivotPages
+			} else {
+				pages, res := GetHyperCubeData(obj, *cappedSize)
+				if res != nil {
+					return nil, res.With("GetHyperCubeData")
+				}
+				cube.DataPages = pages
+			}
+		}
+	}
+
+	return cube, nil
+}

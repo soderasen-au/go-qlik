@@ -43,13 +43,13 @@ func TestWalkApp_1(t *testing.T) {
 	}
 
 	walkers := make(ListWalkFuncMap[ObjectSnapshot])
-	walkers[SHEET_LIST] = func(doc *enigma.Doc, item NxContainerEntry, _logger *zerolog.Logger) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
-		_logger.Info().Msgf(" - walk sheet object[%s/%s]:", item.Info.Type, item.Info.Id)
+	walkers[SHEET_LIST] = NewRecurObjWalkFunc(func(doc *enigma.Doc, info, parent *enigma.NxInfo, _logger *zerolog.Logger) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
+		_logger.Info().Msgf(" - walk object[%s/%s]:", info.Type, info.Id)
 		shot := ObjWalkResult[ObjectSnapshot]{
-			Info: item.Info,
+			Info: info,
 		}
 		return &shot, nil
-	}
+	})
 	walkers[ANY_LIST] = func(doc *enigma.Doc, item NxContainerEntry, _logger *zerolog.Logger) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
 		_logger.Info().Msgf(" - walk any object[%s/%s]:", item.Info.Type, item.Info.Id)
 		shot := ObjWalkResult[ObjectSnapshot]{
