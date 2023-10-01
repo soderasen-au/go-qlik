@@ -35,6 +35,23 @@ type (
 	}
 )
 
+func FlattenObject[T any](obj *ObjWalkResult[T], m ListWalkResult[T]) {
+	m[obj.Info.Id] = obj
+	if obj.ChildResults != nil {
+		for _, c := range obj.ChildResults {
+			FlattenObject(c, m)
+		}
+	}
+}
+
+func FlattenList[T any](list ListWalkResult[T]) ListWalkResult[T] {
+	newMap := make(ListWalkResult[T])
+	for _, obj := range list {
+		FlattenObject(obj, newMap)
+	}
+	return newMap
+}
+
 func NewRecurObjWalkFunc[T any](walker ObjWalkFuncEx[T]) ObjWalkFunc[T] {
 	return func(doc *enigma.Doc, item NxContainerEntry, _logger *zerolog.Logger) (*ObjWalkResult[T], *util.Result) {
 		return RecurWalkObject(doc, item, nil, walker, _logger)
