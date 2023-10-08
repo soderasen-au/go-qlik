@@ -90,3 +90,13 @@ func (cfg Config) IsOnPrem() bool {
 func (cfg Config) IsDesktop() bool {
 	return cfg.ServerType == ST_ON_PREM && cfg.AuthMode == AUTH_MODE_DESKTOP
 }
+
+func (c Config) GetAppUrl() (string, *util.Result) {
+	appUrl, err := url.Parse(c.EngineURI)
+	if err != nil {
+		return "", util.Error("ParseEngineURI", err)
+	}
+
+	appUrl.Scheme = "https"
+	return appUrl.String(), nil
+}
