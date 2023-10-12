@@ -18,11 +18,7 @@ type Script struct {
 }
 
 func (ts *Script) CreateExecEnv(cfg *engine.Config, logger *zerolog.Logger, opts ...ExecEnvOption) *util.Result {
-	if ts.AppID == nil {
-		return util.MsgError("check", "there's no appid")
-	}
-
-	env, res := NewExecEnv(cfg, *ts.AppID, logger, opts...)
+	env, res := NewExecEnv(cfg, util.MaybeNil(ts.AppID), logger, opts...)
 	if res != nil {
 		return res.With("NewExecEnv")
 	}

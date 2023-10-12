@@ -38,11 +38,6 @@ func WithQrsClient(c *qrs.Client) ExecEnvOption {
 // NewExecEnv Note: please call CleanUp() afterwards to close engine connection properly.
 // Script.Run() calls CleanUp() automatically
 func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts ...ExecEnvOption) (*ExecEnv, *util.Result) {
-	res := cfg.QCSEngineURIAppendAppID(appid)
-	if res != nil {
-		return nil, res.With("AppendAppID")
-	}
-
 	env := new(ExecEnv)
 
 	if logger == nil {
@@ -52,20 +47,13 @@ func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts .
 	}
 
 	if appid != "" {
-		conn, err := engine.NewConn(*cfg)
-		if err != nil {
-			return nil, util.Error("NewConn", err)
-		}
-		env.EngineConn = conn
-		env.AppID = appid
-		env.Doc, err = env.EngineConn.Global.OpenDoc(engine.ConnCtx, env.AppID, "", "", "", false)
-		if err != nil {
-			return nil, util.Error("OpenDoc", err)
-		}
-		res = env.GetBookmarkMap()
+		res := env.OpenDoc(appid)
 		if res != nil {
-			return nil, res.With("GetBookmarkMap")
+			return nil, res.With("OpenDoc")
 		}
+	} else {
+		env.EngineConn = &engine.Conn{Cfg: *cfg}
+		env.Log.Warn().Msg("there's no appid, therefore no Engine con or Doc in Env")
 	}
 
 	env.csOrder = make(map[string]int)
@@ -78,6 +66,37 @@ func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts .
 	}
 
 	return env, nil
+}
+
+func (env *ExecEnv) OpenDoc(appid string) *util.Result {
+	env.CleanUp()
+
+	res := env.EngineConn.Cfg.QCSEngineURIAppendAppID(appid)
+	if res != nil {
+		return res.With("AppendAppID")
+	}
+
+	conn, err := engine.NewConn(env.EngineConn.Cfg)
+	if err != nil {
+		return util.Error("NewConn", err)
+	}
+	env.EngineConn = conn
+	env.AppID = appid
+	env.Doc, err = env.EngineConn.Global.OpenDoc(engine.ConnCtx, env.AppID, "", "", "", false)
+	if err != nil {
+		return util.Error("OpenDoc", err)
+	}
+	res = env.GetBookmarkMap()
+	if res != nil {
+		return res.With("GetBookmarkMap")
+	}
+
+	res = env.GetMasterItemsMap()
+	if res != nil {
+		return res.With("GetMasterItemsMap")
+	}
+
+	return nil
 }
 
 func (env *ExecEnv) CreateLogger() error {
@@ -207,4 +226,15 @@ func (env *ExecEnv) Stash(key string, v interface{}) {
 func (env *ExecEnv) Unstash(key string) (interface{}, bool) {
 	v, ok := env.stash[key]
 	return v, ok
+}
+
+func (env *ExecEnv) UnstashString(key string) (string, bool) {
+	if i, ok := env.stash[key]; ok {
+		if s, ok := i.(string); ok {
+			return s, true
+		} else if sp, ok := i.(*string); ok {
+			return *sp, true
+		}
+	}
+	return "", false
 }

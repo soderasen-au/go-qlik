@@ -52,13 +52,13 @@ func (b CmdTaskBase) Validate() *util.Result {
 		return util.MsgError("Suite.Env", "nil ptr")
 	}
 
-	if b.Script.Env.EngineConn == nil {
-		return util.MsgError("Suite.Env", "no Engine connection")
-	}
-
-	if b.Script.Env.Doc == nil {
-		return util.MsgError("Suite.Env.doc", "no app is opened")
-	}
+	//if b.Script.Env.EngineConn == nil {
+	//	return util.MsgError("Suite.Env", "no Engine connection")
+	//}
+	//
+	//if b.Script.Env.Doc == nil {
+	//	return util.MsgError("Suite.Env.doc", "no app is opened")
+	//}
 
 	if b.Def == nil {
 		return util.MsgError("Def", "nil ptr")
