@@ -2,6 +2,7 @@ package ss
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/soderasen-au/go-common/util"
 )
 
@@ -46,14 +47,13 @@ func NewDuplicateTask(s *Script, d *FuncCmdDef, n string) (TaskRunner, *util.Res
 	if d.Cmd != CMD_NAME_DUPLICATE {
 		return nil, util.MsgError(t.Name+"::Validate", "wrong action name")
 	}
-	if len(d.Args) < 1 && len(d.FieldValues) < 1 {
-		t.Logger.Warn().Msgf("%s::Validate: doesn't have any value to duplicate, ignore. ", t.Name)
-	}
 
 	t.AppId = d.Target
 
 	if len(d.Args) >= 1 {
 		t.NewAppName = d.Args[0]
+	} else {
+		t.NewAppName = fmt.Sprintf("duplicate-%s", uuid.NewString()[:8])
 	}
 
 	return t, nil
