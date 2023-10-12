@@ -33,7 +33,7 @@ func (r *Request) Run() (bool, []*util.Result) {
 	for i, task := range r.Tasks {
 		logger.Info().Msgf("running script task[%d]", i)
 		res := task.Run()
-		if res.Code != 0 || strings.HasSuffix(res.Ctx, "export") {
+		if res.Code != 0 || strings.HasSuffix(res.Ctx, CMD_NAME_REPORT) {
 			results = append(results, res)
 		}
 		if res.Code != 0 {
