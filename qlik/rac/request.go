@@ -27,6 +27,9 @@ func (c RestApiClient) GetUrl(endpoint string) string {
 	}
 	if strings.HasPrefix(endpoint, REQ_ROOT_PATH_PREFIX) {
 		u.Path = "/"
+		if c.Config.Auth.Method == AuthMethodJWT && c.Config.VirtualProxy != nil {
+			u.Path = path.Join(u.Path, util.MaybeNil(c.Config.VirtualProxy))
+		}
 		endpoint = strings.TrimLeft(endpoint, REQ_ROOT_PATH_PREFIX)
 	}
 

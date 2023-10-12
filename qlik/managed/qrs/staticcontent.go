@@ -3,6 +3,7 @@ package qrs
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -55,7 +56,12 @@ func (c *Client) GetAppStaticContentList(appid string) ([]StaticContentReference
 }
 
 func (c *Client) GetAppContent(downloadPath string) (data []byte, res *util.Result) {
-	fileData, res := c.Get(rac.GetRootPath(downloadPath))
+	uri, err := url.ParseRequestURI(downloadPath)
+	if err != nil {
+		return nil, util.Error("ParseRequestURI", err)
+	}
+	q := uri.Query()
+	fileData, res := c.Get(rac.GetRootPath(uri.Path), rac.WithParam("serverNodeId", q["serverNodeId"][0]))
 	if res != nil {
 		return nil, res.With("Get")
 	}
