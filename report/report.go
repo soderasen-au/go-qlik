@@ -53,6 +53,15 @@ type CustomHeader struct {
 	Text  string `json:"text,omitempty"`
 }
 
+type ColumnHeaderFormat struct {
+	Order   int    `json:"order"`
+	Label   string `json:"label"`
+	FgColor string `json:"fg_color"`
+	BgColor string `json:"bg_color"`
+	NumFmt  string `json:"num_fmt"`
+	DateFmt string `json:"date_fmt"`
+}
+
 // user has to apply any needed selection before printing report
 type Report struct {
 	ID    *string `json:"id,omitempty" yaml:"id,omitempty" bson:"id,omitempty"`
@@ -70,10 +79,11 @@ type Report struct {
 	TargetIDs []string    `json:"target_ids,omitempty" yaml:"target_ids,omitempty" bson:"target_ids,omitempty"`
 
 	// layout
-	Headers                []CustomHeader    `json:"headers,omitempty" yaml:"headers,omitempty" bson:"headers,omitempty"`
-	OptionalTargetTitles   map[string]string `json:"optional_target_titles,omitempty" yaml:"optional_target_titles,omitempty" bson:"optional_target_titles,omitempty"`
-	OutputCurrentSelection bool              `json:"output_current_selection,omitempty" yaml:"output_current_selection,omitempty" bson:"output_current_selection,omitempty"`
-	CurrentSelectionOrder  map[string]int    `json:"current_selection_order" yaml:"current_selection_order" bson:"current_selection_order"`
+	Headers                []CustomHeader                `json:"headers,omitempty" yaml:"headers,omitempty" bson:"headers,omitempty"`
+	OptionalTargetTitles   map[string]string             `json:"optional_target_titles,omitempty" yaml:"optional_target_titles,omitempty" bson:"optional_target_titles,omitempty"`
+	OutputCurrentSelection bool                          `json:"output_current_selection,omitempty" yaml:"output_current_selection,omitempty" bson:"output_current_selection,omitempty"`
+	CurrentSelectionOrder  map[string]int                `json:"current_selection_order" yaml:"current_selection_order" bson:"current_selection_order"`
+	ColumnHeaderFormats    map[string]ColumnHeaderFormat `json:"column_header_formats,omitempty" yaml:"column_header_formats,omitempty" bson:"column_header_formats,omitempty"`
 
 	// output
 	Driver       *string       `json:"driver,omitempty" yaml:"driver,omitempty" bson:"driver,omitempty"`

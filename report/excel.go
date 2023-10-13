@@ -294,7 +294,7 @@ func (p *ExcelReportPrinter) createNewSheet(doc *enigma.Doc, r Report, objId str
 	return &sheetName, shRect, nil
 }
 
-func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.ObjectLayoutEx, excel *excelize.File, rect enigma.Rect, _logger *zerolog.Logger) (*enigma.Rect, *util.Result) {
+func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.ObjectLayoutEx, excel *excelize.File, rect enigma.Rect, r Report, _logger *zerolog.Logger) (*enigma.Rect, *util.Result) {
 	if layout == nil {
 		return nil, util.MsgError("printObjectHeader", "nil layout")
 	}
@@ -357,8 +357,36 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 			cellLogger.Err(err).Msg("CoordinatesToCellName")
 			return nil, util.Error("CoordinatesToCellName", err)
 		}
-		cellLogger.Debug().Msgf("print cell[%d]: %s", ColCnt, colInfo.FallbackTitle)
-		excel.SetCellStr(sheet, cellName, colInfo.FallbackTitle)
+
+		cellText := colInfo.FallbackTitle
+		var cellStyle *excelize.Style
+		if r.ColumnHeaderFormats != nil {
+			if colHeaderFmt, ok := r.ColumnHeaderFormats[cellText]; ok {
+				if colHeaderFmt.Label != "" {
+					cellText = colHeaderFmt.Label
+				}
+				cs, res := colHeaderFmt.GetHeaderCellStyle(colInfo, &cellLogger)
+				if res != nil {
+					return nil, res.With("GetHeaderCellStyle")
+				}
+				cellStyle = cs
+			}
+		}
+
+		cellLogger.Debug().Msgf("print cell[%d]: %s", ColCnt, cellText)
+		excel.SetCellStr(sheet, cellName, cellText)
+		if cellStyle != nil {
+			cellStyleIx, err := excel.NewStyle(cellStyle)
+			if err != nil {
+				cellLogger.Err(err).Msg("NewStyle")
+				return nil, util.Error("NewStyle", err)
+			}
+			err = excel.SetCellStyle(sheet, cellName, cellName, cellStyleIx)
+			if err != nil {
+				cellLogger.Err(err).Msg("SetCellStyle")
+				return nil, util.Error("SetCellStyle", err)
+			}
+		}
 
 		colName, _, err := excelize.SplitCellName(cellName)
 		if err != nil {
@@ -769,7 +797,7 @@ func (p *ExcelReportPrinter) printStackObject(doc *enigma.Doc, r Report, objId, 
 		sheetName = useSheetName
 	}
 
-	headerRect, res := p.printObjectHeader(sheetName, objLayout, excel, rect, &logger)
+	headerRect, res := p.printObjectHeader(sheetName, objLayout, excel, rect, r, &logger)
 	if res != nil {
 		logger.Err(res).Msg("printObjectHeader failed")
 		return nil, res.With("printObjectHeader")

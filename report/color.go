@@ -2,6 +2,7 @@ package report
 
 import (
 	"fmt"
+	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"strconv"
 	"strings"
 
@@ -70,14 +71,13 @@ func (c ARGBColor) AssignFontStyle(excelStyle *excelize.Style) {
 	excelStyle.Font = &excelize.Font{Color: textCode}
 }
 
-func NewARGBColorFromQlikAttr(attr *enigma.NxSimpleValue) (*ARGBColor, *util.Result) {
-	if attr == nil {
-		return nil, util.MsgError("NewARGBColorFromQlikAttr", "nil attr")
-	}
+func NewARGBFromQlikColor(t string) (*ARGBColor, *util.Result) {
+	t = strings.ToUpper(t)
+	t = strings.ReplaceAll(t, " ", "")
 
 	var ret *ARGBColor
-	if strings.HasPrefix(attr.Text, "ARGB") {
-		argb := attr.Text[4:]
+	if strings.HasPrefix(t, "ARGB") {
+		argb := t[4:]
 		argb = argb[:len(argb)-1]
 		cv := strings.Split(argb, ",")
 		if len(cv) != 4 {
@@ -100,8 +100,8 @@ func NewARGBColorFromQlikAttr(attr *enigma.NxSimpleValue) (*ARGBColor, *util.Res
 			G: g,
 			B: b,
 		}
-	} else if strings.HasPrefix(attr.Text, "RGB") {
-		argb := attr.Text[4:]
+	} else if strings.HasPrefix(t, "RGB") {
+		argb := t[4:]
 		argb = argb[:len(argb)-1]
 		cv := strings.Split(argb, ",")
 		if len(cv) != 3 {
@@ -125,7 +125,7 @@ func NewARGBColorFromQlikAttr(attr *enigma.NxSimpleValue) (*ARGBColor, *util.Res
 			B: b,
 		}
 	} else {
-		colorText := strings.ToLower(attr.Text)
+		colorText := strings.ToLower(t)
 		cv := strings.Split(colorText, "(")
 		colorCode := cv[0]
 		if argb, ok := QlikPredefinedColorMap[colorCode]; ok {
@@ -134,6 +134,14 @@ func NewARGBColorFromQlikAttr(attr *enigma.NxSimpleValue) (*ARGBColor, *util.Res
 	}
 
 	return ret, nil
+}
+
+func NewARGBColorFromQlikAttr(attr *enigma.NxSimpleValue) (*ARGBColor, *util.Result) {
+	if attr == nil {
+		return nil, util.MsgError("NewARGBColorFromQlikAttr", "nil attr")
+	}
+
+	return NewARGBFromQlikColor(attr.Text)
 }
 
 func GetCellColorFont(attrs []*enigma.NxSimpleValue, excelStyle *excelize.Style, cellLogger *zerolog.Logger) *util.Result {
@@ -166,6 +174,31 @@ func GetCellColorFont(attrs []*enigma.NxSimpleValue, excelStyle *excelize.Style,
 	}
 
 	return nil
+}
+
+func (f ColumnHeaderFormat) GetHeaderCellStyle(colInfo *engine.ColumnInfo, cellLogger *zerolog.Logger) (*excelize.Style, *util.Result) {
+	excelStyle := &excelize.Style{}
+	cellLogger.Debug().Msgf("bg color: %s", f.BgColor)
+	bgColor, res := NewARGBFromQlikColor(f.BgColor)
+	if res != nil {
+		return nil, res.LogWith(cellLogger, "NewARGBFrom(BgColor)")
+	}
+	if bgColor != nil {
+		bgColor.AssignBgStyle(excelStyle)
+	}
+
+	cellLogger.Debug().Msgf("fg color: %s", f.FgColor)
+	fgColor, res := NewARGBFromQlikColor(f.FgColor)
+	if res != nil {
+		return nil, res.LogWith(cellLogger, "NewARGBFrom(FgColor)")
+	}
+	if fgColor != nil {
+		fgColor.AssignFontStyle(excelStyle)
+	} else if bgColor != nil {
+		bgColor.AssignLuminanceFont(excelStyle)
+	}
+
+	return excelStyle, nil
 }
 
 func GetStackCellStyle(cell *enigma.NxCell, cellLogger *zerolog.Logger) (*excelize.Style, *util.Result) {
