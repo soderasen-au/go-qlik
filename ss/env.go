@@ -24,6 +24,7 @@ type ExecEnv struct {
 	dims       map[string]*engine.SessionDimensionLayout
 	measures   map[string]*engine.SessionMeasureLayout
 	stash      map[string]interface{}
+	DeferTasks []TaskRunner
 }
 
 type ExecEnvOption func(env *ExecEnv) *ExecEnv
@@ -58,6 +59,7 @@ func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts .
 
 	env.csOrder = make(map[string]int)
 	env.stash = make(map[string]interface{})
+	env.DeferTasks = make([]TaskRunner, 0)
 
 	if opts != nil {
 		for _, opt := range opts {
@@ -69,7 +71,10 @@ func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts .
 }
 
 func (env *ExecEnv) OpenDoc(appid string) *util.Result {
-	env.CleanUp()
+	if env.EngineConn != nil && env.EngineConn.Global != nil {
+		env.Logger().Info().Msg("disconnect from qlik engine")
+		env.EngineConn.Global.DisconnectFromServer()
+	}
 
 	res := env.EngineConn.Cfg.QCSEngineURIAppendAppID(appid)
 	if res != nil {
@@ -139,6 +144,14 @@ func (env *ExecEnv) LogErrorResult(res *util.Result) error {
 }
 
 func (env *ExecEnv) CleanUp() {
+	if env.DeferTasks != nil {
+		for i, t := range env.DeferTasks {
+			env.Logger().Info().Msgf("defer task[%d]", i)
+			res := t.Run()
+			env.Logger().Info().Msgf(" - result: %s", res.Error())
+		}
+	}
+
 	if env.EngineConn != nil && env.EngineConn.Global != nil {
 		env.Logger().Info().Msg("disconnect from qlik engine")
 		env.EngineConn.Global.DisconnectFromServer()
@@ -226,6 +239,10 @@ func (env *ExecEnv) Stash(key string, v interface{}) {
 func (env *ExecEnv) Unstash(key string) (interface{}, bool) {
 	v, ok := env.stash[key]
 	return v, ok
+}
+
+func (env *ExecEnv) DeleteStash(key string) {
+	delete(env.stash, key)
 }
 
 func (env *ExecEnv) UnstashString(key string) (string, bool) {
