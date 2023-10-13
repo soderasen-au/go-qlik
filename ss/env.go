@@ -143,6 +143,10 @@ func (env *ExecEnv) LogErrorResult(res *util.Result) error {
 	return nil
 }
 
+func (env *ExecEnv) Defer(t TaskRunner) {
+	env.DeferTasks = append(env.DeferTasks, t)
+}
+
 func (env *ExecEnv) CleanUp() {
 	if env.DeferTasks != nil {
 		for i, t := range env.DeferTasks {

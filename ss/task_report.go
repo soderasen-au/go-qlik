@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	CMD_NAME_REPORT      = "report"
+	CMD_NAME_REPORT = "report"
+
 	StashKeyReportFolder = "_report_folder"
 	StashKeyReportName   = "_report_name"
+	StashKeyReportResult = "_report_result"
 )
 
 func init() {
@@ -69,6 +71,8 @@ func (t *ReportTask) Run() *util.Result {
 	if rr != nil {
 		return rr.With("GetReportResult")
 	}
+
+	t.Script.Env.Stash(StashKeyReportResult, result)
 	return util.NewResult(t.Name, result)
 }
 
