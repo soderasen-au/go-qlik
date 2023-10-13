@@ -25,7 +25,7 @@ type ReportTask struct {
 
 func (t *ReportTask) Run() *util.Result {
 	if t.Report.AppId == "" {
-		dupAppId, ok := t.Script.Env.Unstash(CMD_NAME_DUPLICATE)
+		dupAppId, ok := t.Script.Env.Unstash(StashKeyTmpDupApp)
 		if !ok {
 			return util.MsgError(t.Name+"::Run", "there's no duplicated app to "+CMD_NAME_REPORT)
 		}

@@ -6,7 +6,10 @@ import (
 	"github.com/soderasen-au/go-common/util"
 )
 
-const CMD_NAME_DUPLICATE = "duplicate"
+const (
+	CMD_NAME_DUPLICATE = "duplicate"
+	StashKeyTmpDupApp  = "_tmp_dup_app"
+)
 
 func init() {
 	taskRunnerCreators[CMD_NAME_DUPLICATE] = NewDuplicateTask
@@ -26,8 +29,8 @@ func (t *DuplicateTask) Run() *util.Result {
 	}
 	t.Script.Env.Stash(t.Name, app)
 	t.Logger.Info().Msgf("Stash[%s]: %s", t.Name, app.ID)
-	t.Script.Env.Stash(CMD_NAME_DUPLICATE, app)
-	t.Logger.Info().Msgf("Stash[%s]: %s", CMD_NAME_DUPLICATE, app.ID)
+	t.Script.Env.Stash(StashKeyTmpDupApp, app)
+	t.Logger.Info().Msgf("Stash[%s]: %s", StashKeyTmpDupApp, app.ID)
 
 	return util.OK(t.Name)
 }
