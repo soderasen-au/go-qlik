@@ -267,19 +267,13 @@ func (c *Client) GetAppInfo(appid string) (*App, *util.Result) {
 	return app, nil
 }
 
-func (c *Client) DeleteApp(id string) (*App, *util.Result) {
-	resp, res := c.Do(http.MethodDelete, "/app/"+id, nil, nil)
+func (c *Client) DeleteApp(id string) *util.Result {
+	_, res := c.Do(http.MethodDelete, "/app/"+id, nil, nil)
 	if res != nil {
-		return nil, res.With("DeleteApp")
+		return res.With("DeleteApp")
 	}
 
-	app := App{}
-	err := json.Unmarshal(resp, &app)
-	if err != nil {
-		return nil, util.Error("ParseApp", err)
-	}
-
-	return &app, nil
+	return nil
 }
 
 //func (c *Client) UpdateApp(id string, app *AppPtr) (*AppPtr, *util.Result) {
