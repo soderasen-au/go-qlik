@@ -6,7 +6,11 @@ import (
 	"github.com/soderasen-au/go-qlik/qlik/managed/qrs"
 )
 
-const CMD_NAME_DEL_APP = "del_app"
+const (
+	CMD_NAME_DEL_APP = "del_app"
+
+	_DeleteStashTmpDupApp bool = true
+)
 
 func init() {
 	taskRunnerCreators[CMD_NAME_DEL_APP] = NewDel_AppTask
@@ -18,7 +22,7 @@ type Del_AppTask struct {
 }
 
 func (t *Del_AppTask) Run() *util.Result {
-	if t.AppId == "" {
+	if t.AppId == "" && _DeleteStashTmpDupApp {
 		t.Logger.Warn().Msg("there's no appid to del, try to del temp duplicated app instead")
 		dupAppId, ok := t.Script.Env.Unstash(StashKeyTmpDupApp)
 		if !ok {
@@ -30,6 +34,11 @@ func (t *Del_AppTask) Run() *util.Result {
 		}
 		t.Logger.Info().Msgf("use duplicated app: %s to %s", dupApp.ID, CMD_NAME_DEL_APP)
 		t.AppId = dupApp.ID
+	}
+
+	if t.AppId == "" {
+		t.Logger.Warn().Msg("there's no app id to delete, ignore")
+		return util.OK("there's no app id")
 	}
 
 	t.Logger.Info().Msgf("deleting app: %s", t.AppId)
