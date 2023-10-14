@@ -56,12 +56,12 @@ func (t *ReportTask) Run() *util.Result {
 		if *t.Report.Driver == report.DRIVER_SENSE {
 			printer = report.NewSenseReportPrinter(t.Script.Env.QrsClient)
 		} else if *t.Report.Driver == report.DRIVER_BUILT_IN {
-			printer = report.NewExcelReportPrinter()
+			printer = report.NewBuiltInReportPrinter()
 		} else {
 			return util.LogMsgError(t.Logger, "load driver", "unsupported driver: "+*t.Report.Driver)
 		}
 	} else {
-		printer = report.NewExcelReportPrinter()
+		printer = report.NewBuiltInReportPrinter()
 	}
 
 	if res := printer.Print(t.Report); res != nil {

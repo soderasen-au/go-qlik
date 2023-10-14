@@ -16,6 +16,8 @@ type ReportFormat string
 
 const (
 	REPORT_FORMAT_XLSX ReportFormat = "xlsx"
+	REPORT_FORMAT_CSV  ReportFormat = "csv"
+	REPORT_FORMAT_TSV  ReportFormat = "tsv"
 	REPORT_FORMAT_PDF  ReportFormat = "pdf"
 
 	TARGET_OBJECTS string = "objects"
@@ -29,8 +31,20 @@ func (f ReportFormat) IsExcel() bool {
 	return f == REPORT_FORMAT_XLSX
 }
 
+func (f ReportFormat) IsCsv() bool {
+	return f == REPORT_FORMAT_CSV || f == REPORT_FORMAT_TSV
+}
+
+func (f ReportFormat) IsTsv() bool {
+	return f == REPORT_FORMAT_TSV
+}
+
+func (f ReportFormat) IsPdf() bool {
+	return f == REPORT_FORMAT_PDF
+}
+
 func (f ReportFormat) IsValid() bool {
-	return f == REPORT_FORMAT_PDF || f == REPORT_FORMAT_XLSX
+	return f.IsExcel() || f.IsCsv() || f.IsPdf()
 }
 
 func (f *ReportFormat) MaybeDefault() {
@@ -41,6 +55,9 @@ func (f *ReportFormat) MaybeDefault() {
 
 type ReportPrinterBase struct {
 	ReportResults map[string]*ReportResult //report-id -> report-results
+	Doc           *enigma.Doc
+	R             Report
+	Logger        *zerolog.Logger
 }
 
 type IReportPrinter interface {
