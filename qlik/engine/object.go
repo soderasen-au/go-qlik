@@ -9,8 +9,10 @@ import (
 )
 
 var (
-	PAGE_MAX_CELLS int = 16384
+	PAGE_MAX_CELLS int = 8192
 )
+
+type PagingMethod func(rect enigma.Rect) []*enigma.NxPage
 
 func Paging(rect enigma.Rect) []*enigma.NxPage {
 	pages := make([]*enigma.NxPage, 0)
@@ -43,14 +45,47 @@ func Paging(rect enigma.Rect) []*enigma.NxPage {
 	return pages
 }
 
-func GetHyperCubeData(obj *enigma.GenericObject, sz enigma.Size) ([]*enigma.NxDataPage, *util.Result) {
+func PivotPaging(rect enigma.Rect) []*enigma.NxPage {
+	pages := make([]*enigma.NxPage, 0)
+	if rect.Height*rect.Width < PAGE_MAX_CELLS {
+		pages = append(pages, &enigma.NxPage{
+			Top:    rect.Top,
+			Left:   rect.Left,
+			Height: rect.Height,
+			Width:  rect.Width,
+		})
+		return pages
+	}
+
+	rectBottom := rect.Top + rect.Height
+	batchHeight := int(PAGE_MAX_CELLS / rect.Width)
+
+	for r0 := rect.Top; r0 < rectBottom+batchHeight; r0 += batchHeight {
+		pages = append(pages, &enigma.NxPage{
+			Top:    r0,
+			Left:   rect.Left,
+			Height: batchHeight,
+			Width:  rect.Width,
+		})
+	}
+
+	return pages
+}
+
+func GetHyperCubeData(obj *enigma.GenericObject, sz enigma.Size, pagingFuncs ...PagingMethod) ([]*enigma.NxDataPage, *util.Result) {
 	rect := enigma.Rect{
 		Top:    0,
 		Left:   0,
 		Height: sz.Cy,
 		Width:  sz.Cx,
 	}
-	pages := Paging(rect)
+
+	var pages []*enigma.NxPage
+	if len(pagingFuncs) > 0 {
+		pages = pagingFuncs[0](rect)
+	} else {
+		pages = Paging(rect)
+	}
 
 	type _Result struct {
 		Err      error
@@ -96,33 +131,6 @@ func GetHyperCubeData(obj *enigma.GenericObject, sz enigma.Size) ([]*enigma.NxDa
 	}
 
 	return dataPages, nil
-}
-
-func PivotPaging(rect enigma.Rect) []*enigma.NxPage {
-	pages := make([]*enigma.NxPage, 0)
-	if rect.Height*rect.Width < PAGE_MAX_CELLS {
-		pages = append(pages, &enigma.NxPage{
-			Top:    rect.Top,
-			Left:   rect.Left,
-			Height: rect.Height,
-			Width:  rect.Width,
-		})
-		return pages
-	}
-
-	rectBottom := rect.Top + rect.Height
-	batchHeight := PAGE_MAX_CELLS / rect.Width
-
-	for r0 := rect.Top; r0 < rectBottom+batchHeight; r0 += batchHeight {
-		pages = append(pages, &enigma.NxPage{
-			Top:    r0,
-			Left:   rect.Left,
-			Height: batchHeight,
-			Width:  rect.Width,
-		})
-	}
-
-	return pages
 }
 
 func GetHyperCubePivotData(obj *enigma.GenericObject, sz enigma.Size) ([]*enigma.NxPivotPage, *util.Result) {
