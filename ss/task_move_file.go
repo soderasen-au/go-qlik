@@ -5,7 +5,7 @@ import (
 	"github.com/soderasen-au/go-common/util"
 	"github.com/soderasen-au/go-qlik/report"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 const CMD_NAME_MOVE_FILE = "move_file"
@@ -43,9 +43,9 @@ func (t *Move_FileTask) Run() *util.Result {
 		return util.Error("CheckTargetPath", err)
 	} else {
 		if fs.IsDir() {
-			t.Logger.Debug().Msgf("target `%s` is directory, calc target file name")
-			_, fn := path.Split(t.SrcPath)
-			t.TgtPath = path.Join(t.TgtPath, fn)
+			t.Logger.Debug().Msgf("target `%s` is directory, calc target file name", t.TgtPath)
+			_, fn := filepath.Split(t.SrcPath)
+			t.TgtPath = filepath.Join(t.TgtPath, fn)
 			t.Logger.Info().Msgf(" - original target is directory, new target file name: %s", t.TgtPath)
 		}
 	}
