@@ -536,7 +536,7 @@ func (p *ExcelReportPrinter) printCell(excel *excelize.File, sheet string, pos C
 
 		// }
 	}
-	cellLogger.Debug().Msgf("print cell Text(%s), Num(%v), IsNum(%v), hasColInfo(%v)", cell.Text, cellNum, isNum, hasColInfo)
+	cellLogger.Trace().Msgf("print cell Text(%s), Num(%v), IsNum(%v), hasColInfo(%v)", cell.Text, cellNum, isNum, hasColInfo)
 
 	if isNum && hasColInfo {
 		if err := excel.SetCellFloat(sheet, pos.ExcelCellName, cellNum, -1, 64); err != nil {
@@ -562,7 +562,7 @@ func (p *ExcelReportPrinter) printCell(excel *excelize.File, sheet string, pos C
 				excelStyle = &excelize.Style{}
 			}
 			excelStyle.CustomNumFmt = &colInfo.NumFormat.Fmt
-			cellLogger.Info().Msgf("set cell num format: %s", *excelStyle.CustomNumFmt)
+			cellLogger.Trace().Msgf("set cell num format: %s", *excelStyle.CustomNumFmt)
 		}
 	}
 
@@ -611,7 +611,7 @@ func (p *ExcelReportPrinter) printPivotDataCell(excel *excelize.File, sheet stri
 				excelStyle = &excelize.Style{}
 			}
 			excelStyle.CustomNumFmt = &exp.NumFormat.Fmt
-			cellLogger.Info().Msgf("set cell num format: %s", *excelStyle.CustomNumFmt)
+			cellLogger.Trace().Msgf("set cell num format: %s", *excelStyle.CustomNumFmt)
 		}
 	} else if expIx < len(layout.HyperCube.MeasureInfo) {
 		exp := layout.HyperCube.MeasureInfo[expIx]
@@ -620,7 +620,7 @@ func (p *ExcelReportPrinter) printPivotDataCell(excel *excelize.File, sheet stri
 				excelStyle = &excelize.Style{}
 			}
 			excelStyle.CustomNumFmt = &exp.NumFormat.Fmt
-			cellLogger.Info().Msgf("set cell num format: %s", *excelStyle.CustomNumFmt)
+			cellLogger.Trace().Msgf("set cell num format: %s", *excelStyle.CustomNumFmt)
 		}
 	} else {
 		cellLogger.Error().Msgf("failed to export: (%d, %d)", pos.CubeRowIx, pos.CubeColIx)

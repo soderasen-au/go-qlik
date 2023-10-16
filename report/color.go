@@ -150,7 +150,7 @@ func GetCellColorFont(attrs []*enigma.NxSimpleValue, excelStyle *excelize.Style,
 	}
 
 	bgAttr := attrs[0]
-	cellLogger.Debug().Msgf("bg attr: %s", bgAttr.Text)
+	cellLogger.Trace().Msgf("bg attr: %s", bgAttr.Text)
 	bgColor, res := NewARGBColorFromQlikAttr(bgAttr)
 	if res != nil {
 		return res.With("NewARGBColorFromQlikAttr(bgAttr)")
@@ -160,7 +160,7 @@ func GetCellColorFont(attrs []*enigma.NxSimpleValue, excelStyle *excelize.Style,
 
 		if len(attrs) > 1 {
 			fontAttr := attrs[1]
-			cellLogger.Debug().Msgf("font attr: %s", fontAttr.Text)
+			cellLogger.Trace().Msgf("font attr: %s", fontAttr.Text)
 			fontColor, res := NewARGBColorFromQlikAttr(fontAttr)
 			if res != nil {
 				return res.With("NewARGBColorFromQlikAttr(fontAttr)")
