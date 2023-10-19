@@ -2,8 +2,8 @@ package ss
 
 import (
 	"fmt"
-
 	"github.com/google/uuid"
+
 	"github.com/rs/zerolog"
 	"github.com/soderasen-au/go-common/util"
 	"github.com/soderasen-au/go-qlik/qlik/engine"
@@ -60,11 +60,8 @@ func (ts *Script) GenerateTaskRunners() ([]TaskRunner, *util.Result) {
 }
 
 func (s *Script) NewRequest() (*Request, *util.Result) {
-	if s.ID == "" {
-		s.ID = uuid.NewString()
-	}
-
 	req := &Request{
+		Id:     uuid.NewString(),
 		Script: s,
 	}
 	if req.Script == nil {

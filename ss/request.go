@@ -9,15 +9,16 @@ import (
 )
 
 type Request struct {
+	Id     string
 	Script *Script
 	Tasks  []TaskRunner
 }
 
 func (r *Request) ID() string {
-	if r.Script.ID == "" {
-		r.Script.ID = uuid.NewString()
+	if r.Id == "" {
+		r.Id = uuid.NewString()
 	}
-	return r.Script.ID
+	return r.Id
 }
 
 func (r *Request) Name() string {
@@ -25,7 +26,12 @@ func (r *Request) Name() string {
 }
 
 func (r *Request) Run() (bool, []*util.Result) {
-	defer r.Script.Env.CleanUp()
+	defer func() {
+		if r.Script.Env != nil {
+			r.Script.Env.CleanUp()
+			r.Script.Env = nil
+		}
+	}()
 
 	logger := r.Script.Env.Logger().With().Str("script", r.Script.ID).Logger()
 	logger.Info().Msg("run")
