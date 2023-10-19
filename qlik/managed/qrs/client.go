@@ -29,6 +29,10 @@ func NewClient(cfg Config) (*Client, *util.Result) {
 	}
 	c.client = client
 
+	_, res = c.About()
+	if res != nil {
+		return nil, res.With("About")
+	}
 	return c, nil
 }
 
