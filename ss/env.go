@@ -71,27 +71,30 @@ func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts .
 }
 
 func (env *ExecEnv) OpenDoc(appid string) *util.Result {
+	if env.Doc != nil {
+		env.Logger().Info().Msg("close doc")
+		env.Doc.DisconnectFromServer()
+	}
 	if env.EngineConn != nil && env.EngineConn.Global != nil {
 		env.Logger().Info().Msg("disconnect from qlik engine")
 		env.EngineConn.Global.DisconnectFromServer()
 	}
 
-	res := env.EngineConn.Cfg.QCSEngineURIAppendAppID(appid)
-	if res != nil {
-		return res.With("AppendAppID")
-	}
-
+	env.EngineConn.Cfg.AppID = appid
 	conn, err := engine.NewConn(env.EngineConn.Cfg)
 	if err != nil {
 		return util.Error("NewConn", err)
 	}
 	env.EngineConn = conn
+
+	env.Logger().Debug().Msgf("EngineConn[%s] at [%s]", env.EngineConn.Cfg.AppID, env.EngineConn.Cfg.EngineURI)
 	env.AppID = appid
+	env.Logger().Debug().Msgf("OpenDoc: %s", env.AppID)
 	env.Doc, err = env.EngineConn.Global.OpenDoc(engine.ConnCtx, env.AppID, "", "", "", false)
 	if err != nil {
 		return util.Error("OpenDoc", err)
 	}
-	res = env.GetBookmarkMap()
+	res := env.GetBookmarkMap()
 	if res != nil {
 		return res.With("GetBookmarkMap")
 	}
@@ -156,6 +159,10 @@ func (env *ExecEnv) CleanUp() {
 		}
 	}
 
+	if env.Doc != nil {
+		env.Logger().Info().Msg("close doc")
+		env.Doc.DisconnectFromServer()
+	}
 	if env.EngineConn != nil && env.EngineConn.Global != nil {
 		env.Logger().Info().Msg("disconnect from qlik engine")
 		env.EngineConn.Global.DisconnectFromServer()
