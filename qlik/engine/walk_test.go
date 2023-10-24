@@ -3,8 +3,6 @@ package engine
 import (
 	"testing"
 
-	"github.com/qlik-oss/enigma-go/v4"
-	"github.com/rs/zerolog"
 	"github.com/soderasen-au/go-common/crypto"
 	"github.com/soderasen-au/go-common/loggers"
 	"github.com/soderasen-au/go-common/util"
@@ -43,17 +41,19 @@ func TestWalkApp_1(t *testing.T) {
 	}
 
 	walkers := make(ListWalkFuncMap[ObjectSnapshot])
-	walkers[SHEET_LIST] = NewRecurObjWalkFunc(func(doc *enigma.Doc, info, parent *enigma.NxInfo, _logger *zerolog.Logger) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
-		_logger.Info().Msgf(" - walk object[%s/%s]:", info.Type, info.Id)
+	walkers[SHEET_LIST] = NewRecurObjWalkFunc(func(e ObjWalkEntry) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
+		e.Logger.Info().Msgf(" - walk object[%s/%s]:", e.Info.Type, e.Info.Id)
 		shot := ObjWalkResult[ObjectSnapshot]{
-			Info: info,
+			Info:   e.Info,
+			Parent: e.Parent,
 		}
 		return &shot, nil
 	})
-	walkers[ANY_LIST] = func(doc *enigma.Doc, item NxContainerEntry, _logger *zerolog.Logger) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
-		_logger.Info().Msgf(" - walk any object[%s/%s]:", item.Info.Type, item.Info.Id)
+	walkers[ANY_LIST] = func(e ObjWalkEntry) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
+		e.Logger.Info().Msgf(" - walk any object[%s/%s]:", e.Item.Info.Type, e.Item.Info.Id)
 		shot := ObjWalkResult[ObjectSnapshot]{
-			Info: item.Info,
+			Info:   e.Info,
+			Parent: e.Parent,
 		}
 		return &shot, nil
 	}

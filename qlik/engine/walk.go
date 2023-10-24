@@ -12,23 +12,34 @@ import (
 )
 
 type (
-	ObjWalkResult[T any] struct {
-		Info         *enigma.NxInfo      `json:"qInfo"`
-		Meta         *NxMeta             `json:"qMeta"`
-		Result       *T                  `json:"qProperties"`
-		ChildResults []*ObjWalkResult[T] `json:"qChildInfos"`
+	ObjWalkEntry struct {
+		AppId  *string
+		Doc    *enigma.Doc
+		Item   *NxContainerEntry
+		Info   *enigma.NxInfo
+		Parent *enigma.NxInfo
+		Logger *zerolog.Logger
 	}
+
+	ObjWalkResult[T any] struct {
+		Info         *enigma.NxInfo      `json:"info,omitempty" yaml:"info,omitempty"`
+		Parent       *enigma.NxInfo      `json:"parent,omitempty" yaml:"parent,omitempty"`
+		Meta         *NxMeta             `json:"meta,omitempty" yaml:"meta,omitempty"`
+		Result       *T                  `json:"result,omitempty" yaml:"result,omitempty"`
+		ChildResults []*ObjWalkResult[T] `json:"child_results,omitempty" yaml:"child_results,omitempty"`
+	}
+
 	ListWalkResult[T any] map[string]*ObjWalkResult[T] // objectId => Object Info
 	AppWalkResult[T any]  map[string]ListWalkResult[T] // listName => Objects Infos of list
 
-	ObjWalkFunc[T any]     func(doc *enigma.Doc, item NxContainerEntry, _logger *zerolog.Logger) (*ObjWalkResult[T], *util.Result)
-	ObjWalkFuncEx[T any]   func(doc *enigma.Doc, info, parent *enigma.NxInfo, _logger *zerolog.Logger) (*ObjWalkResult[T], *util.Result)
+	ObjWalkFunc[T any]     func(e ObjWalkEntry) (*ObjWalkResult[T], *util.Result)
 	ListWalkFuncMap[T any] map[string]ObjWalkFunc[T] // listName => ObjWalkFunc
 
 	ObjWalker[T any] struct {
-		Walker ObjWalkFuncEx[T]
-		Logger *zerolog.Logger
+		Walker ObjWalkFunc[T]
+		Entry  ObjWalkEntry
 	}
+
 	AppWalker[T any] struct {
 		Walkers ListWalkFuncMap[T]
 		Logger  *zerolog.Logger
@@ -52,9 +63,9 @@ func FlattenList[T any](list ListWalkResult[T]) ListWalkResult[T] {
 	return newMap
 }
 
-func NewRecurObjWalkFunc[T any](walker ObjWalkFuncEx[T]) ObjWalkFunc[T] {
-	return func(doc *enigma.Doc, item NxContainerEntry, _logger *zerolog.Logger) (*ObjWalkResult[T], *util.Result) {
-		return RecurWalkObject(doc, item, nil, walker, _logger)
+func NewRecurObjWalkFunc[T any](walker ObjWalkFunc[T]) ObjWalkFunc[T] {
+	return func(e ObjWalkEntry) (*ObjWalkResult[T], *util.Result) {
+		return RecurWalkObject(e, walker)
 	}
 }
 
@@ -62,18 +73,14 @@ func (w *AppWalker[T]) Walk(doc *enigma.Doc) (AppWalkResult[T], *util.Result) {
 	return WalkApp(doc, w.Walkers, w.Logger)
 }
 
-func (w *AppWalker[T]) WalkSheets(doc *enigma.Doc, walker ObjWalkFuncEx[T]) (AppWalkResult[T], *util.Result) {
+func (w *AppWalker[T]) WalkSheets(doc *enigma.Doc, walker ObjWalkFunc[T]) (AppWalkResult[T], *util.Result) {
 	walkers := make(ListWalkFuncMap[T])
 	walkers[SHEET_LIST] = NewRecurObjWalkFunc(walker)
 	return WalkApp(doc, walkers, w.Logger)
 }
 
 func (w *ObjWalker[T]) Walk(doc *enigma.Doc, info *enigma.NxInfo) (*ObjWalkResult[T], *util.Result) {
-	rootEntry := NxContainerEntry{
-		Info: info,
-		Meta: &NxMeta{},
-	}
-	return RecurWalkObject(doc, rootEntry, nil, w.Walker, w.Logger)
+	return RecurWalkObject(w.Entry, w.Walker)
 }
 
 func WalkApp[T any](doc *enigma.Doc, walkers ListWalkFuncMap[T], _logger *zerolog.Logger) (AppWalkResult[T], *util.Result) {
@@ -84,6 +91,13 @@ func WalkApp[T any](doc *enigma.Doc, walkers ListWalkFuncMap[T], _logger *zerolo
 		Str("mod", "engine").
 		Str("func", "WalkApp").
 		Logger()
+
+	app, err := doc.GetAppLayout(ConnCtx)
+	if err != nil {
+		return nil, util.Error("GetAppLayout", err)
+	}
+	appid := app.FileName
+	_logger.Trace().Msgf("layout.FileName: %s", appid)
 
 	layout, res := GetSessionObjectLayout(doc)
 	if res != nil {
@@ -100,16 +114,16 @@ func WalkApp[T any](doc *enigma.Doc, walkers ListWalkFuncMap[T], _logger *zerolo
 		listName := layoutType.Field(i).Name
 		//logger.Debug().Msgf("layout field: %s", listName)
 		if _, ok := ObjectListNameMap[listName]; ok {
-			logger.Info().Msgf("Walk object list: %s", listName)
+			logger.Debug().Msgf("Walk object list: %s", listName)
 			walker, ok := walkers[listName]
 			if !ok {
-				logger.Warn().Msgf(" - no walker for %s", listName)
+				logger.Debug().Msgf(" - no walker for %s", listName)
 				walker, ok = walkers[ANY_LIST]
 				if !ok {
-					logger.Warn().Msg("   - no default walker to use, skip this list")
+					logger.Debug().Msg("   - no default walker to use, skip this list")
 					continue
 				}
-				logger.Warn().Msg("   - use default walker for any list")
+				logger.Debug().Msg("   - use default walker for any list")
 			}
 			if listField.Kind() != reflect.Ptr {
 				return nil, util.LogMsgError(&logger,
@@ -141,10 +155,16 @@ func WalkApp[T any](doc *enigma.Doc, walkers ListWalkFuncMap[T], _logger *zerolo
 
 				go func() {
 					defer wg.Done()
-					if item.Meta == nil {
-						item.Meta = &NxMeta{}
+					entry := ObjWalkEntry{
+						AppId:  util.Ptr(appid),
+						Doc:    doc,
+						Item:   item,
+						Info:   item.Info,
+						Parent: nil,
+						Logger: &logger,
 					}
-					objRes, res := walker(doc, *item, &logger)
+
+					objRes, res := walker(entry)
 
 					mutex.Lock()
 					defer mutex.Unlock()
@@ -166,25 +186,25 @@ func WalkApp[T any](doc *enigma.Doc, walkers ListWalkFuncMap[T], _logger *zerolo
 	return appResult, nil
 }
 
-func RecurWalkObject[T any](doc *enigma.Doc, entry NxContainerEntry, parent *enigma.NxInfo, walker ObjWalkFuncEx[T], _logger *zerolog.Logger) (*ObjWalkResult[T], *util.Result) {
-	if _logger == nil {
-		_logger = loggers.CoreDebugLogger
+func RecurWalkObject[T any](e ObjWalkEntry, walker ObjWalkFunc[T]) (*ObjWalkResult[T], *util.Result) {
+	if e.Logger == nil {
+		e.Logger = loggers.CoreDebugLogger
 	}
-	qid := entry.Info.Id
-	qtype := entry.Info.Type
-	logger := _logger.With().
+	qid := e.Item.Info.Id
+	qtype := e.Item.Info.Type
+	logger := e.Logger.With().
 		Str("mod", "engine").
 		Str("func", "RecursiveGetSnapshots").
 		Str("entry", fmt.Sprintf("%s/%s", qtype, qid)).
 		Logger()
 
-	objResult, res := walker(doc, entry.Info, parent, &logger)
+	objResult, res := walker(e)
 	if res != nil {
-		return nil, res.With(fmt.Sprintf("walker[%s/%s]", entry.Info.Type, entry.Info.Id))
+		return nil, res.With(fmt.Sprintf("walker[%s/%s]", e.Info.Type, e.Info.Id))
 	}
 
 	logger.Trace().Msg("GetChildInfos")
-	obj, err := GetObject(doc, qtype, qid)
+	obj, err := GetObject(e.Doc, qtype, qid)
 	if err != nil {
 		return nil, util.Error("can't get obj "+qid, err)
 	}
@@ -210,12 +230,19 @@ func RecurWalkObject[T any](doc *enigma.Doc, entry NxContainerEntry, parent *eni
 		wg.Add(1)
 		go func(i int, child *enigma.NxInfo) {
 			defer wg.Done()
-			chiledEntry := NxContainerEntry{
-				Info: child,
-				Meta: &NxMeta{},
+			entry := ObjWalkEntry{
+				AppId: e.AppId,
+				Doc:   e.Doc,
+				Item: &NxContainerEntry{
+					Info: child,
+					Meta: &NxMeta{},
+				},
+				Info:   child,
+				Parent: e.Info,
+				Logger: e.Logger,
 			}
 			logger.Trace().Msgf("child[%d]: %s/%s start", i, child.Type, child.Id)
-			childObjShot, res := RecurWalkObject(doc, chiledEntry, entry.Info, walker, _logger)
+			childObjShot, res := RecurWalkObject(entry, walker)
 			logger.Trace().Msgf("child[%d]: %s/%s finished", i, child.Type, child.Id)
 
 			mutex.Lock()

@@ -1,11 +1,13 @@
 package engine
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/rs/zerolog"
 	"github.com/soderasen-au/go-common/crypto"
+	"github.com/soderasen-au/go-common/loggers"
 	"github.com/soderasen-au/go-common/util"
 )
 
@@ -17,31 +19,35 @@ type ObjectSnapshot struct {
 	Digest      string            `json:"digest,omitempty"`
 }
 
-func ObjSnapshoter(doc *enigma.Doc, info, parent *enigma.NxInfo, _logger *zerolog.Logger) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
-	_logger.Trace().Msgf("snapshot [%s/%s]", info.Type, info.Id)
+func ObjSnapshoter(e ObjWalkEntry) (*ObjWalkResult[ObjectSnapshot], *util.Result) {
+	if e.Logger == nil {
+		e.Logger = loggers.NullLogger
+	}
+	e.Logger.Trace().Msgf("snapshot at %s[%s/%s]", util.MaybeNil(e.AppId), e.Info.Type, e.Info.Id)
 
-	obj, err := GetObject(doc, info.Type, info.Id)
+	obj, err := GetObject(e.Doc, e.Info.Type, e.Info.Id)
 	if err != nil {
 		return nil, util.Error("GetObject", err)
 	}
 	if !HasMethodOn(obj, "GetPropertiesRaw") {
-		return nil, util.LogMsgError(_logger, "HasMethodOn", "GetPropertiesRaw")
+		return nil, util.LogMsgError(e.Logger, "HasMethodOn", "GetPropertiesRaw")
 	}
 	prop, err := Invoke1Res1ErrOn(obj, "GetPropertiesRaw", ConnCtx)
 	if err != nil {
 		return nil, util.Error("Invoke1Res1ErrOn::GetPropertiesRaw", err)
 	}
 	buf := prop.Interface().(json.RawMessage)
+	buf = bytes.ReplaceAll(buf, []byte(util.MaybeNil(e.AppId)), []byte("__appid__"))
 	digest, res := crypto.SHA2656Hex(buf)
 	if res != nil {
 		return nil, res.With("SHA2656Hex")
 	}
 	objProp := ObjectPropeties{
-		Info:       info,
+		Info:       e.Info,
 		Properties: buf,
 	}
-	title, desc := GetTitle(nil, &objProp, _logger)
-	_logger.Trace().Msgf(" - Title: %s, Description: %s", util.MaybeNil(title), util.MaybeNil(desc))
+	title, desc := GetTitle(e.Parent, &objProp, e.Logger)
+	e.Logger.Trace().Msgf(" - Title: %s, Description: %s", util.MaybeNil(title), util.MaybeNil(desc))
 
 	var cube *enigma.HyperCube
 	genericObj, ok := obj.Interface().(*enigma.GenericObject)
@@ -51,12 +57,12 @@ func ObjSnapshoter(doc *enigma.Doc, info, parent *enigma.NxInfo, _logger *zerolo
 			return nil, res.With("GetHyperCube")
 		}
 		if cube != nil && cube.Size != nil {
-			_logger.Trace().Msgf(" - [%s/%s] size: (%d, %d)", util.MaybeNil(title), util.MaybeNil(desc), cube.Size.Cy, cube.Size.Cx)
+			e.Logger.Trace().Msgf(" - [%s/%s] size: (%d, %d)", util.MaybeNil(title), util.MaybeNil(desc), cube.Size.Cy, cube.Size.Cx)
 		}
 	}
 
 	objShot := ObjWalkResult[ObjectSnapshot]{
-		Info: info,
+		Info: e.Info,
 		Result: &ObjectSnapshot{
 			Title:       title,
 			Description: desc,
