@@ -26,9 +26,9 @@ type Conn struct {
 func newCertConn(cfg Config) (con *Conn, err error) {
 	headers := make(http.Header, 1)
 	headers.Set("X-Qlik-User", fmt.Sprintf("UserDirectory=%s; UserId=%s", cfg.UserDirectory, cfg.UserName))
-	tlsConfig, err := cfg.Certs.NewTlsConfig()
-	if err != nil {
-		return nil, err
+	tlsConfig, res := cfg.Certs.NewTlsConfig()
+	if res != nil {
+		return nil, res.With("NewTlsConfig")
 	}
 	global, err := enigma.Dialer{TLSClientConfig: tlsConfig}.Dial(ConnCtx, cfg.EngineURI, headers)
 	if err != nil {

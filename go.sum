@@ -126,6 +126,8 @@ github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPx
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/soderasen-au/go-common v0.5.3 h1:5Nor7WgGl2Eyl72AKBQXElnrV1g6RSOJL9dLjvw/WR0=
 github.com/soderasen-au/go-common v0.5.3/go.mod h1:YyN95z5WRDyiBaerBSL3um1yj7soTuVXYx1fbUnUww4=
+github.com/soderasen-au/go-common v0.6.0 h1:uAjm8kJb2aBBqUezVL5m3oUQrMOzi5Gkf8Land7OCGs=
+github.com/soderasen-au/go-common v0.6.0/go.mod h1:7J3Gq65zbYRfu3kvpGTL1KYebjHOd1hxKJextzgiflk=
 github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf/go.mod h1:RJID2RhlZKId02nZ62WenDCkgHFerpIOmW0iT7GKmXM=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

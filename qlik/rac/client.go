@@ -128,9 +128,9 @@ func (c *RestApiClient) initCertClient() (*RestApiClient, *util.Result) {
 	id := c.Config.Auth.User.Id
 	c.Config.ExtraHeaders["X-Qlik-User"] = fmt.Sprintf("UserDirectory=%s; UserId=%s", dir, id)
 
-	tlsCertsConfig, err := c.Config.Auth.Certs.NewTlsConfig()
-	if err != nil {
-		return nil, util.Error("NewTlsConfig", err)
+	tlsCertsConfig, res := c.Config.Auth.Certs.NewTlsConfig()
+	if res != nil {
+		return nil, res.With("Certs.NewTlsConfig")
 	}
 	transport, ok := c.client.Transport.(*http.Transport)
 	if !ok {
