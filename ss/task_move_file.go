@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"github.com/soderasen-au/go-common/util"
 	"github.com/soderasen-au/go-qlik/report"
-	"os"
-	"path/filepath"
 )
 
 const CMD_NAME_MOVE_FILE = "move_file"
@@ -35,25 +33,11 @@ func (t *Move_FileTask) Run() *util.Result {
 			t.Logger.Warn().Msg(" - there's no tmp report file")
 		}
 	}
-	if t.SrcPath == "" {
-		return util.MsgError("CheckSourcePath", "no source path to move")
-	}
-
-	if fs, err := os.Stat(t.TgtPath); err != nil {
-		return util.Error("CheckTargetPath", err)
-	} else {
-		if fs.IsDir() {
-			t.Logger.Debug().Msgf("target `%s` is directory, calc target file name", t.TgtPath)
-			_, fn := filepath.Split(t.SrcPath)
-			t.TgtPath = filepath.Join(t.TgtPath, fn)
-			t.Logger.Info().Msgf(" - original target is directory, new target file name: %s", t.TgtPath)
-		}
-	}
 
 	t.Logger.Info().Msgf("moving file: %s => %s", t.SrcPath, t.TgtPath)
-	err := os.Rename(t.SrcPath, t.TgtPath)
-	if err != nil {
-		return util.Error("Rename", err)
+	res := util.MoveFile(t.SrcPath, t.TgtPath)
+	if res != nil {
+		return res.LogWith(t.Logger, "MoveFile")
 	}
 
 	return util.OK(t.Name)
