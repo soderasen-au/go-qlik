@@ -355,16 +355,16 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 		layout.ColumnInfos = append(layout.ColumnInfos, colInfo)
 		cellText := colInfo.FallbackTitle
 
-		cube2report[ci] = ci
+		cube2report[ColCnt] = ColCnt
 		if r.ColumnHeaderFormats != nil {
 			if colHeaderFmt, ok := r.ColumnHeaderFormats[cellText]; ok {
 				logger.Info().Msgf(" - sense[%d]:%s => report[%d]", ci, cellText, colHeaderFmt.Order)
-				cube2report[ci] = colHeaderFmt.Order
+				cube2report[ColCnt] = colHeaderFmt.Order
 			} else {
 				logger.Warn().Msgf("can not find report column format for cube column: `%s`", cellText)
 			}
 		}
-		repIdx := cube2report[ci]
+		repIdx := cube2report[ColCnt]
 
 		cellName, err := excelize.CoordinatesToCellName(c0+repIdx, r0)
 		cellLogger := logger.With().Str("coor", fmt.Sprintf("(%d, %d)", r0, c0+repIdx)).Str("name", cellName).Logger()
