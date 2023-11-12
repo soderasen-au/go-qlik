@@ -124,10 +124,8 @@ github.com/rs/zerolog v1.31.0/go.mod h1:/7mN4D5sKwJLZQ2b/znpjC3/GQWY/xaDXUM0kKWR
 github.com/sethgrid/pester v0.0.0-20190127155807-68a33a018ad0/go.mod h1:Ad7IjTpvzZO8Fl0vh9AzQ+j/jYZfyp2diGwI8m5q+ns=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
-github.com/soderasen-au/go-common v0.5.3 h1:5Nor7WgGl2Eyl72AKBQXElnrV1g6RSOJL9dLjvw/WR0=
-github.com/soderasen-au/go-common v0.5.3/go.mod h1:YyN95z5WRDyiBaerBSL3um1yj7soTuVXYx1fbUnUww4=
-github.com/soderasen-au/go-common v0.6.0 h1:uAjm8kJb2aBBqUezVL5m3oUQrMOzi5Gkf8Land7OCGs=
-github.com/soderasen-au/go-common v0.6.0/go.mod h1:7J3Gq65zbYRfu3kvpGTL1KYebjHOd1hxKJextzgiflk=
+github.com/soderasen-au/go-common v0.6.1 h1:fD0rAk+tS0Xx7/bO3cTG+UrrW1y/jLmhxL28TT4o+IM=
+github.com/soderasen-au/go-common v0.6.1/go.mod h1:7J3Gq65zbYRfu3kvpGTL1KYebjHOd1hxKJextzgiflk=
 github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf/go.mod h1:RJID2RhlZKId02nZ62WenDCkgHFerpIOmW0iT7GKmXM=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
@@ -283,3 +281,5 @@ honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190418001031-e561f6794a2a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
+software.sslmate.com/src/go-pkcs12 v0.3.0 h1:ZYaL72OA2n9UgvesM62z1xmb4PYjgzswQ7xkuC08FEI=
+software.sslmate.com/src/go-pkcs12 v0.3.0/go.mod h1:Qiz0EyvDRJjjxGyUQa2cCNZn/wMyzrRJ/qcDXOQazLI=

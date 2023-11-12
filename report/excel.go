@@ -294,12 +294,12 @@ func (p *ExcelReportPrinter) createNewSheet(doc *enigma.Doc, r Report, objId str
 	return &sheetName, shRect, nil
 }
 
-func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.ObjectLayoutEx, excel *excelize.File, rect enigma.Rect, r Report, _logger *zerolog.Logger) (*enigma.Rect, *util.Result) {
+func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.ObjectLayoutEx, excel *excelize.File, rect enigma.Rect, r Report, _logger *zerolog.Logger) (*enigma.Rect, map[int]int, *util.Result) {
 	if layout == nil {
-		return nil, util.MsgError("printObjectHeader", "nil layout")
+		return nil, nil, util.MsgError("printObjectHeader", "nil layout")
 	}
 	if excel == nil {
-		return nil, util.MsgError("printObjectHeader", "nil excel")
+		return nil, nil, util.MsgError("printObjectHeader", "nil excel")
 	}
 
 	logger := _logger.With().Str("print", "header").Logger()
@@ -312,7 +312,7 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 	boldStyleId, err := excel.NewStyle(boldFont)
 	if err != nil {
 		logger.Err(err).Msg("NewStyle")
-		return nil, util.Error("NewStyle", err)
+		return nil, nil, util.Error("NewStyle", err)
 	}
 
 	printTotals := layout.Totals != nil && layout.Totals.Show && len(layout.HyperCube.GrandTotalRow) > 0
@@ -326,13 +326,16 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 	c0 = rect.Left
 	DimCnt := len(layout.HyperCube.DimensionInfo)
 
+	ColumnOrder := layout.HyperCube.ColumnOrder
+	if ColumnOrder == nil || len(ColumnOrder) == 0 {
+		ColumnOrder = layout.HyperCube.EffectiveInterColumnSortOrder
+	}
+
 	var colInfo *engine.ColumnInfo
 	layout.ColumnInfos = make([]*engine.ColumnInfo, 0)
-	if layout.HyperCube.ColumnOrder == nil || len(layout.HyperCube.ColumnOrder) == 0 {
-		layout.HyperCube.ColumnOrder = layout.HyperCube.EffectiveInterColumnSortOrder
-	}
-	for ci, colIx := range layout.HyperCube.ColumnOrder {
-		logger.Info().Msgf("header col: %d => %d", ci, colIx)
+	cube2report := make(map[int]int) // cube column index => report column index
+	for ci, colIx := range ColumnOrder {
+		logger.Info().Msgf("header display[%d] => cube[%d/%d]", ci, colIx, DimCnt)
 		expIx := colIx - DimCnt
 		if colIx < DimCnt {
 			dim := layout.HyperCube.DimensionInfo[colIx]
@@ -350,15 +353,26 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 			colInfo = engine.NewColumnInfoFromMeasure(exp)
 		}
 		layout.ColumnInfos = append(layout.ColumnInfos, colInfo)
+		cellText := colInfo.FallbackTitle
 
-		cellName, err := excelize.CoordinatesToCellName(c0+ColCnt, r0)
-		cellLogger := logger.With().Str("coor", fmt.Sprintf("(%d, %d)", r0, c0+ColCnt)).Str("name", cellName).Logger()
+		cube2report[ci] = ci
+		if r.ColumnHeaderFormats != nil {
+			if colHeaderFmt, ok := r.ColumnHeaderFormats[cellText]; ok {
+				logger.Info().Msgf(" - sense[%d]:%s => report[%d]", ci, cellText, colHeaderFmt.Order)
+				cube2report[ci] = colHeaderFmt.Order
+			} else {
+				logger.Warn().Msgf("can not find report column format for cube column: `%s`", cellText)
+			}
+		}
+		repIdx := cube2report[ci]
+
+		cellName, err := excelize.CoordinatesToCellName(c0+repIdx, r0)
+		cellLogger := logger.With().Str("coor", fmt.Sprintf("(%d, %d)", r0, c0+repIdx)).Str("name", cellName).Logger()
 		if err != nil {
 			cellLogger.Err(err).Msg("CoordinatesToCellName")
-			return nil, util.Error("CoordinatesToCellName", err)
+			return nil, nil, util.Error("CoordinatesToCellName", err)
 		}
 
-		cellText := colInfo.FallbackTitle
 		var cellStyle *excelize.Style
 		if r.ColumnHeaderFormats != nil {
 			if colHeaderFmt, ok := r.ColumnHeaderFormats[cellText]; ok {
@@ -367,9 +381,11 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 				}
 				cs, res := colHeaderFmt.GetHeaderCellStyle(colInfo, &cellLogger)
 				if res != nil {
-					return nil, res.With("GetHeaderCellStyle")
+					return nil, nil, res.With("GetHeaderCellStyle")
 				}
 				cellStyle = cs
+			} else {
+				logger.Warn().Msgf("can not find report column format for cube column: `%s`", cellText)
 			}
 		}
 
@@ -379,30 +395,30 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 			cellStyleIx, err := excel.NewStyle(cellStyle)
 			if err != nil {
 				cellLogger.Err(err).Msg("NewStyle")
-				return nil, util.Error("NewStyle", err)
+				return nil, nil, util.Error("NewStyle", err)
 			}
 			err = excel.SetCellStyle(sheet, cellName, cellName, cellStyleIx)
 			if err != nil {
 				cellLogger.Err(err).Msg("SetCellStyle")
-				return nil, util.Error("SetCellStyle", err)
+				return nil, nil, util.Error("SetCellStyle", err)
 			}
 		}
 
 		colName, _, err := excelize.SplitCellName(cellName)
 		if err != nil {
 			cellLogger.Err(err).Msg("SplitCellName")
-			return nil, util.Error("SplitCellName", err)
+			return nil, nil, util.Error("SplitCellName", err)
 		}
 		w, err := excel.GetColWidth(sheet, colName)
 		if err != nil {
 			cellLogger.Err(err).Msg("GetColWidth")
-			return nil, util.Error("GetColWidth", err)
+			return nil, nil, util.Error("GetColWidth", err)
 		}
 		if w < float64(colInfo.ApprMaxGlyphCount) && colInfo.ApprMaxGlyphCount < 64 {
 			err = excel.SetColWidth(sheet, colName, colName, float64(colInfo.ApprMaxGlyphCount))
 			if err != nil {
 				cellLogger.Err(err).Msg("SetColWidth")
-				return nil, util.Error("SetColWidth", err)
+				return nil, nil, util.Error("SetColWidth", err)
 			}
 		}
 
@@ -410,7 +426,7 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 			totalCellName, err := excelize.CoordinatesToCellName(c0+ColCnt, r0+1)
 			if err != nil {
 				cellLogger.Err(err).Msg("CoordinatesToCellName")
-				return nil, util.Error("CoordinatesToCellName", err)
+				return nil, nil, util.Error("CoordinatesToCellName", err)
 			}
 
 			totalText := ""
@@ -440,7 +456,7 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 		resRect.Height++
 	}
 
-	return &resRect, nil
+	return &resRect, cube2report, nil
 }
 
 func (p *ExcelReportPrinter) printPivotObjectHeader(sheet string, layout *engine.ObjectLayoutEx, excel *excelize.File, rect enigma.Rect, _logger *zerolog.Logger) (*enigma.Rect, *util.Result) {
@@ -797,7 +813,7 @@ func (p *ExcelReportPrinter) printStackObject(doc *enigma.Doc, r Report, objId, 
 		sheetName = useSheetName
 	}
 
-	headerRect, res := p.printObjectHeader(sheetName, objLayout, excel, rect, r, &logger)
+	headerRect, cube2report, res := p.printObjectHeader(sheetName, objLayout, excel, rect, r, &logger)
 	if res != nil {
 		logger.Err(res).Msg("printObjectHeader failed")
 		return nil, res.With("printObjectHeader")
@@ -829,7 +845,8 @@ func (p *ExcelReportPrinter) printStackObject(doc *enigma.Doc, r Report, objId, 
 		pageLogger.Debug().Msg("start")
 
 		for ri, rowCells := range page.Matrix {
-			for ci, cell := range rowCells {
+			for _ci, cell := range rowCells {
+				ci := cube2report[_ci]
 				cellName, err := excelize.CoordinatesToCellName(c0+ci, r0+ri)
 				if err != nil {
 					logger.Err(err).Msg("CoordinatesToCellName")

@@ -100,7 +100,7 @@ type Report struct {
 	OptionalTargetTitles   map[string]string             `json:"optional_target_titles,omitempty" yaml:"optional_target_titles,omitempty" bson:"optional_target_titles,omitempty"`
 	OutputCurrentSelection bool                          `json:"output_current_selection,omitempty" yaml:"output_current_selection,omitempty" bson:"output_current_selection,omitempty"`
 	CurrentSelectionOrder  map[string]int                `json:"current_selection_order" yaml:"current_selection_order" bson:"current_selection_order"`
-	ColumnHeaderFormats    map[string]ColumnHeaderFormat `json:"column_header_formats,omitempty" yaml:"column_header_formats,omitempty" bson:"column_header_formats,omitempty"`
+	ColumnHeaderFormats    map[string]ColumnHeaderFormat `json:"column_header_formats,omitempty" yaml:"column_header_formats,omitempty" bson:"column_header_formats,omitempty"` // only supports stack object
 
 	// output
 	Driver       *string       `json:"driver,omitempty" yaml:"driver,omitempty" bson:"driver,omitempty"`
