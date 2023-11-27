@@ -846,17 +846,20 @@ func (p *ExcelReportPrinter) printStackObject(doc *enigma.Doc, r Report, objId, 
 
 		for ri, rowCells := range page.Matrix {
 			for _ci, cell := range rowCells {
-				ci := cube2report[_ci]
-				cellName, err := excelize.CoordinatesToCellName(c0+ci, r0+ri)
+				cubeColIx := page.Area.Left + _ci
+				ci := cube2report[cubeColIx]
+				reportColIx := resRect.Left + ci
+				reportRowIx := r0 + ri
+				cellName, err := excelize.CoordinatesToCellName(reportColIx, reportRowIx)
 				if err != nil {
 					logger.Err(err).Msg("CoordinatesToCellName")
 					return nil, util.Error("CoordinatesToCellName", err)
 				}
 				cellLogger := pageLogger.With().
-					Str("coor", fmt.Sprintf("(%d, %d)", r0+ri, c0+ci)).
+					Str("coor", fmt.Sprintf("(%d, %d)", reportRowIx, reportColIx)).
 					Str("name", cellName).
 					Logger()
-				pos := CellPos{ExcelCellName: cellName, CubeColIx: page.Area.Left + ci, CubeRowIx: page.Area.Top + ri}
+				pos := CellPos{ExcelCellName: cellName, CubeColIx: cubeColIx, CubeRowIx: page.Area.Top + ri}
 				if cres := p.printCell(excel, sheetName, pos, objLayout, cell, &cellLogger); cres != nil {
 					logger.Err(cres).Msg("printCell")
 					return nil, cres.With("printCell")

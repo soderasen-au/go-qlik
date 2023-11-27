@@ -2,13 +2,13 @@ package report
 
 import (
 	"fmt"
-	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"strconv"
 	"strings"
 
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/rs/zerolog"
 	"github.com/soderasen-au/go-common/util"
+	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -200,9 +200,11 @@ func (f ColumnHeaderFormat) GetHeaderCellStyle(colInfo *engine.ColumnInfo, cellL
 
 	if f.DateFmt != "" {
 		cellLogger.Debug().Msgf("num fmt: %s", f.DateFmt)
+		colInfo.NumFormat.Fmt = f.DateFmt
 		excelStyle.CustomNumFmt = &f.DateFmt
 	} else if f.NumFmt != "" {
 		cellLogger.Debug().Msgf("num fmt: %s", f.NumFmt)
+		colInfo.NumFormat.Fmt = f.NumFmt
 		excelStyle.CustomNumFmt = &f.NumFmt
 	}
 	cellLogger.Debug().Msgf("excel custom num fmt: %s", util.MaybeNil(excelStyle.CustomNumFmt))
