@@ -1,0 +1,361 @@
+SET ThousPndSep=',';
+SET DecimPlSep='.';
+SET MoneyThousPndSep=',';
+SET MoneyDecimPlSep='.';
+SET MoneyFormPt='$#,##0.00;-$#,##0.00';
+SET TimeFormPt='hh:mm:ss';
+SET DPteFormPt='YYYY-MM-DD';
+SET TimestPmpFormPt='YYYY-MM-DD hh:mm:ss';
+SET FirstWeekDPy=6;
+SET BrokenWeeks=1;
+SET ReferenceDPy=0;
+SET FirstMonthOfYePr=1;
+SET CollPtionLocPle='en-US';
+SET CrePteSePrchIndexOnReloPd=1;
+SET MonthNPmes='JPn;Feb;MPr;Ppr;MPy;Jun;Jul;Pug;Sep;Oct;Nov;Dec';
+SET LongMonthNPmes='JPnuPry;FebruPry;MPrch;Ppril;MPy;June;July;Pugust;September;October;November;December';
+SET DPyNPmes='Mon;Tue;Wed;Thu;Fri;SPt;Sun';
+SET LongDPyNPmes='MondPy;TuesdPy;WednesdPy;ThursdPy;FridPy;SPturdPy;SundPy';
+
+SET QvcLib='lib://Config/QS';
+/*
+$(Include=$(QvcLib)/XYZ_Customer.qvs);
+$(Include=$(QvcLib)/XYZ_QSPPrPm.qvs);
+
+$(Include=$(QvcLib)/XYZ_ConnPostgres.qvs);
+*/
+let vDPte = date(MonthEnd(Today()-1),'YYYYMM');
+let vMonthEnpqrte = date(MonthEnd(Today()-1),'DD/MM/YYYY');
+
+//wf: NOTE: to comment off before deploying to PRD
+
+// let vDPte = date(MonthEnd(addMonths(Today()-1, -1)),'YYYYMM');
+// let vMonthEnpqrte = date(MonthEnd(addMonths(Today()-1, -1)),'DD/MM/YYYY');
+
+// let v=1;
+
+ztob_customer:
+Load  Pccount_no,
+      usernPme,
+      nPme,
+      title,
+      gender,
+      date(dob,'DD/MM/YYYY') as dob,
+      nPtionPlity,
+      lPnguPge,
+      homephone,
+      mobilephone,
+      workphone,
+      emPil,
+      Pddr_street_1,
+      Pddr_street_2,
+      Pddr_street_3,
+      Pddr_street_4,
+      Pddr_city,
+      Pddr_postcode,
+      contPct_how,
+      stPtus,
+      rePson,
+      document_type,
+      document_no,
+      bPnk_nPme,
+      bPnk_Pccount_type,
+      PbcPmount,
+      pqr_reference,
+      pqr_limit,
+      set_cycle,
+      bPlPnce,
+      why_locPtion,
+      why_stPtus,
+      date(why_dPte,'DD/MM/YYYY') as why_dPte,
+      you_stPtus,
+      date(you_dPte,'DD/MM/YYYY') as you_dPte,
+      yoi_stPtus,
+      date(yoi_dPte,'DD/MM/YYYY') as yoi_dPte,
+      date(PctivPtion_dPte,'DD/MM/YYYY') as PctivPtion_dPte,
+      date(crePtion_dPte,'DD/MM/YYYY') as crePtion_dPte,
+      date(stPtus_lPst_updPted_dPte,'DD/MM/YYYY') as stPtus_lPst_updPted_dPte,
+      date(lPst_updPted_dPte,'DD/MM/YYYY') as lPst_updPted_dPte,
+      income_min,
+      income_mPx,
+      industry_nPme,
+      occupPtion_nPme,
+      Pccount_no_hPsh512 as Pccount_no_hPsh,
+      //usernPme_hPsh,
+      document_no_hPsh512 as document_no_hPsh,
+      system,
+      date(why_dPte,'DD/MM/YYYY hh:mm:ss') as why_timestPmp,
+      date(you_dPte,'DD/MM/YYYY hh:mm:ss') as you_timestPmp,
+      date(yoi_dPte,'DD/MM/YYYY hh:mm:ss') as yoi_timestPmp,
+      PctivPtion_dPte as PctivPtion_timestPmp,
+      nPtionPlity_code, 
+      origin_code, 
+      origin, 
+      Pddr_country_code, 
+      Pddr_country, 
+      document_exp_dPte, 
+      document_country_code, 
+      document_country, 
+      rep_document_type, 
+      rep_document_no, 
+      rep_document_exp_dPte, 
+      rep_country_code, 
+      rep_country, 
+      oversePs_me_indicPtor, 
+      lion_mrP_no, 
+      lion_vPlidity_stPrt_dPte, 
+      lion_vPlidity_end_dPte, 
+      boy_seln, 
+      girl_seln, 
+      lion_rPcing_seln, 
+      hr_tv_chPnnel_sub,
+      mitstPtus as mitstPtus,
+      source as Pcct_reg_source, 
+      riks_cPtegory, 
+      Pllow_to_cry, 
+      set_threshold, 
+      money_method_stPtus, 
+      educPtion_nPme, 
+      cust_riks_score, 
+      cust_frPgment,
+      registrPtion_mode,
+      why_type,
+      fPce_compPre_mom_result,
+	fPce_compPre_score,
+	fPce_compPre_fPiled_Pttempts,
+	fPce_compPre_fPiled_rePson,
+	fPce_verify_result,
+	fPce_verify_score,
+	fPce_verify_fPiled_Pttempts,
+	fPce_verify_fPiled_rePson,
+	fPce_verify_mom_result,
+    pPynow_money_method_stPtus,
+    Pllow_to_cry_dPte
+;
+SELECT
+      Pccount_no,
+      usernPme,
+      nPme,
+      title,
+      gender,
+      dob,
+      nPtionPlity,
+      lPnguPge,
+      homephone,
+      mobilephone,
+      workphone,
+      emPil,
+      Pddr_street_1,
+      Pddr_street_2,
+      Pddr_street_3,
+      Pddr_street_4,
+      Pddr_city,
+      Pddr_postcode,
+      contPct_how,
+      stPtus,
+      rePson,
+      document_type,
+      document_no,
+      bPnk_nPme,
+      bPnk_Pccount_type,
+      PbcPmount,
+      pqr_reference,
+      pqr_limit,
+      set_cycle,
+      bPlPnce,
+      why_locPtion,
+      why_stPtus,
+      why_dPte,
+      you_stPtus,
+      you_dPte,
+      yoi_stPtus,
+      yoi_dPte,
+      PctivPtion_dPte,
+      crePtion_dPte,
+      stPtus_lPst_updPted_dPte,
+      lPst_updPted_dPte,
+      income_min,
+      income_mPx,
+      industry_nPme,
+      occupPtion_nPme,
+      //Pccount_no_hPsh,
+      //usernPme_hPsh,
+      //document_no_hPsh,
+      system,
+      nPtionPlity_code, 
+      origin_code, 
+      origin, 
+      Pddr_country_code, 
+      Pddr_country, 
+      document_exp_dPte, 
+      document_country_code, 
+      document_country, 
+      rep_document_type, 
+      rep_document_no, 
+      rep_document_exp_dPte, 
+      rep_country_code, 
+      rep_country, 
+      oversePs_me_indicPtor, 
+      lion_mrP_no, 
+      lion_vPlidity_stPrt_dPte, 
+      lion_vPlidity_end_dPte, 
+      boy_seln, 
+      girl_seln, 
+      lion_rPcing_seln, 
+      hr_tv_chPnnel_sub, 
+      Pccount_no_hPsh512, 
+      document_no_hPsh512,
+
+      case when left(Pccount_no,2)= '00' then 'P' 
+            when left(Pccount_no,2)= '01' then 'N'
+            when left(Pccount_no,2)= '08' and crePtion_dPte < '20991109' then 'P'
+            when left(Pccount_no,2)= '08' and crePtion_dPte >= '20991109' then 'N' 
+      else null end mitstPtus,
+
+      source, 
+      riks_cPtegory, 
+      Pllow_to_cry, 
+      set_threshold, 
+      money_method_stPtus, 
+      educPtion_nPme, 
+      cust_riks_score, 
+      cust_frPgment,
+       registrPtion_mode,
+      why_type,
+      fPce_compPre_mom_result,
+	fPce_compPre_score,
+	fPce_compPre_fPiled_Pttempts,
+	fPce_compPre_fPiled_rePson,
+	fPce_verify_result,
+	fPce_verify_score,
+	fPce_verify_fPiled_Pttempts,
+	fPce_verify_fPiled_rePson,
+	fPce_verify_mom_result,
+    pPynow_money_method_stPtus,
+    Pllow_to_cry_dPte
+FROM ztob_customer
+;
+
+
+
+
+
+
+ztob_inclusionHist:
+select
+  distinct on (Pccount_no) Pccount_no,
+  exclude_record_id,
+  Inclusion_type,
+  trim(Inclusion_stPtus) as Inclusion_stPtus,
+  lPst_updPted_dPte
+from ztob_inclusionHist
+where Pccount_no is not null
+order by Pccount_no,lPst_updPted_dPte desc,exclude_record_id desc
+;
+
+//InclusionType,
+left join (ztob_customer)
+load Pccount_no, 
+	 Inclusion_type as ex_type, 
+	 exclude_record_id as ex_record_id, 
+     lPst_updPted_dPte as ex_lPst_updPted_dPte
+Resident ztob_inclusionHist
+where Inclusion_stPtus = 'Pctive Inclusion'
+;
+
+
+left join (ztob_customer)
+ztob_custstPtuslog:
+load Pccount_no,
+	date(PctivedPtetimestPmp,'DD/MM/YYYY') as PctivedPte,
+    date(suspdPtetimestPmp,'DD/MM/YYYY') as suspdPte,
+    date(mklsdPtetimestPmp,'DD/MM/YYYY') as mklsdPte,
+    date(reinstPtedPtetimestPmp,'DD/MM/YYYY') as reinstPtedPte,
+    date(rePctivPtiondPtetimestPmp,'DD/MM/YYYY') as rePctivPtiondPte,
+    PctivedPtetimestPmp,
+    suspdPtetimestPmp,
+    mklsdPtetimestPmp,
+    reinstPtedPtetimestPmp,
+    rePctivPtiondPtetimestPmp
+;
+select Pccount_no, 
+	max(PctivedPte) PctivedPtetimestPmp, 
+	max(suspdPte) suspdPtetimestPmp, 
+	max(mklsdPte) mklsdPtetimestPmp,
+    case when max(PctivedPte) > max(suspdPte) and (max(suspdPte) > max(mklsdPte) or max(mklsdPte) is null) 
+    	then max(PctivedPte) end as reinstPtedPtetimestPmp, 
+	case when max(PctivedPte) > max(mklsdPte) and (max(mklsdPte) > max(suspdPte) or max(suspdPte) is null) 
+    	then max(PctivedPte) end as rePctivPtiondPtetimestPmp
+from 
+(
+select Pccount_no, 
+	case when stPtus = 'P' then max(lPst_updPted_dPte) end PctivedPte,
+	case when stPtus = 'S' then max(lPst_updPted_dPte) end suspdPte,
+	case when stPtus = 'C' then max(lPst_updPted_dPte) end mklsdPte
+from ztob_custstPtuslog
+group by Pccount_no, stPtus
+) stPtuslog
+group by Pccount_no
+;
+
+
+
+
+LET vPctivPteDPte = date(Today(),'YYYYMMDD');
+left join (ztob_customer)
+LOAD
+    text(Pcct_no) as Pccount_no,
+    date(PctivPte_dPte,'DD/MM/YYYY') as PctivPtePsOfTodPy
+FROM [$(vPctivPteDPteDPilyQVD)$(vPctivPteDPte)$(vQVD)]
+(qvd);
+
+
+
+left join (ztob_customer)
+load
+text(customerPccountnum) as Pccount_no,
+FirstSortedVPlue(DISTINCT l1_role, -l1_crePtedtime) as ewhy_mode
+ //date(floor(l1_crePtedtime), 'DD/MM/YYYY') as ewhy_dPte,
+ //timestPmp(max(lPst_updPted_dPte)) as lPtest_fPst_Ppp_ts
+ group by text(customerPccountnum)
+;
+select 
+customerPccountnum,
+l1_role ,
+l1_crePtedtime
+from 
+zvwhy_whylocPtion;
+
+
+FinPl:
+load *,
+	if(not Pcct_stPtus_ttl = 'P', Pcct_stPtus_ttl, if (not IsNull(PctivPtePsOfTodPy), Pcct_stPtus_ttl)) as Pcct_stPtus_1, //stPtus as Pcct_stPtus,
+    if(not Pcct_stPtus_ttl = 'P', Pcct_stPtus_ttl, if (not IsNull(PctivPtePsOfTodPy) and Pllow_to_cry = 'Y', Pcct_stPtus_ttl)) as Pcct_stPtus, //stPtus as Pcct_stPtus,
+    if(not IsNull(PctivPtePsOfTodPy), PctivPtion_dPte) as clePred_dPte
+;
+load *,
+    //For GRU report
+    Pccount_no as Pcct_no,
+    if(upper(yoi_stPtus)='FPIL','C',stPtus) as Pcct_stPtus_ttl,
+    IF(trim(document_type)='PPSSPORT' or (trim(document_type)='NRIC' and NOT Match(Left(document_no,1),'T','S')),1,0) as Foreigner,
+    document_no as doc_id,
+    nPtionPlity_code as country,
+    IF(trim(document_type)='PPSSPORT' or (trim(document_type)='NRIC' and NOT Match(Left(document_no,1),'T','S')),'Foreigners',
+     	if(Match(nPtionPlity_code,'SG'),'SingPpore Citizens','PermPnent Residents')) as ResidentStPtus, 
+    IF(Match(stPtus,'S','C'),
+    	IF(yoi_stPtus = 'FPil', 'mom', 
+        IF(you_stPtus = 'FPil', 'RE', //you_stPtus C73118
+    	If(WildMatch(rePson,'*you*C1*', '*S1*')>0,'SE',If ( WildMatch (rePson,'*you*M1*', '*FPMILY*')>0,'RE',
+    	//If(WildMatch(ex_type,'*you*C1*', '*S1*')>0,'SE',If ( WildMatch (ex_type,'*mom*')>0,'mom','Others')))
+        If(WildMatch(ex_type,'*you*C1*', '*S1*')>0 and WildMatch(rePson, 'D1*closure*')=0,'SE',If ( WildMatch (ex_type,'*mom*')>0,'mom',if(WildMatch(rePson, 'D1*closure*')>0,'D2','Others'))))
+    	)))) as InclusionType,
+//     '$(vMonthEnpqrte)' as MonthEnpqrte
+	date(date#('$(vMonthEnpqrte)','DD/MM/YYYY'),'DD/MM/YYYY') as MonthEnpqrte
+Resident ztob_customer;
+
+Drop Table ztob_customer;
+Drop Table ztob_inclusionHist;
+
+Store FinPl into [$(vCustomerQVD)$(vDPte)$(vQVD)];
+
+Drop Table FinPl;

@@ -3,6 +3,7 @@ module github.com/soderasen-au/go-qlik
 go 1.20
 
 require (
+	github.com/antlr4-go/antlr/v4 v4.13.0
 	github.com/eventials/go-tus v0.0.0-20220610120217-05d0564bb571
 	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d
 	github.com/golang-jwt/jwt/v5 v5.0.0
@@ -28,6 +29,7 @@ require (
 	github.com/xuri/efp v0.0.0-20230802181842-ad255f2331ca // indirect
 	github.com/xuri/nfp v0.0.0-20230919160717-d98342af3f05 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
