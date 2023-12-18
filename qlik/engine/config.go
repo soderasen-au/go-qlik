@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"hash/fnv"
+	"math/rand"
 	"net/url"
 	"path"
 	"strings"
@@ -99,4 +101,42 @@ func (c Config) GetAppUrl() (string, *util.Result) {
 
 	appUrl.Scheme = "https"
 	return appUrl.String(), nil
+}
+
+const (
+	RandomMethod   string = "random"
+	HashAppMethod  string = "hash_app"
+	HashUserMethod string = "hash_user"
+)
+
+type Cluster struct {
+	Method string    `json:"method" yaml:"method"`
+	Nodes  []*Config `json:"nodes" yaml:"nodes"`
+}
+
+func (c Cluster) PickOneFor(appid, uid string) *Config {
+	nodeLen := len(c.Nodes)
+	if c.Nodes == nil || nodeLen == 0 {
+		return nil
+	}
+	if nodeLen == 1 {
+		return c.Nodes[0]
+	}
+
+	ret := c.Nodes[rand.Intn(nodeLen)]
+	hasher := fnv.New32a()
+	switch c.Method {
+	case HashAppMethod:
+		if len(appid) > 0 {
+			hasher.Write([]byte(appid))
+			ret = c.Nodes[hasher.Sum32()%uint32(nodeLen)]
+		}
+	case HashUserMethod:
+		if len(uid) > 0 {
+			hasher.Write([]byte(uid))
+			ret = c.Nodes[hasher.Sum32()%uint32(nodeLen)]
+		}
+	}
+
+	return ret
 }

@@ -28,11 +28,22 @@ func (c *QSFoldersConfig) Validate() {
 }
 
 type QSConfig struct {
-	Engine  *engine.Config   `json:"engine,omitempty" yaml:"engine,omitempty" bson:"engine,omitempty"`
-	QRS     *qrs.Config      `json:"qrs,omitempty" yaml:"qrs,omitempty" bson:"qrs,omitempty"`
-	QPS     *rac.Config      `json:"qps,omitempty" yaml:"qps,omitempty" bson:"qps,omitempty"`
-	Hub     *HubConfig       `json:"hub,omitempty" yaml:"hub,omitempty" bson:"hub,omitempty"`
-	Folders *QSFoldersConfig `json:"folders,omitempty" yaml:"folders,omitempty" bson:"folders,omitempty"`
+	Engine        *engine.Config   `json:"engine,omitempty" yaml:"engine,omitempty" bson:"engine,omitempty"`
+	EngineCluster *engine.Cluster  `json:"engine_cluster,omitempty" yaml:"engine_cluster,omitempty" bson:"engine_cluster"`
+	QRS           *qrs.Config      `json:"qrs,omitempty" yaml:"qrs,omitempty" bson:"qrs,omitempty"`
+	QPS           *rac.Config      `json:"qps,omitempty" yaml:"qps,omitempty" bson:"qps,omitempty"`
+	Hub           *HubConfig       `json:"hub,omitempty" yaml:"hub,omitempty" bson:"hub,omitempty"`
+	Folders       *QSFoldersConfig `json:"folders,omitempty" yaml:"folders,omitempty" bson:"folders,omitempty"`
+}
+
+func (c QSConfig) PickOneEngineFor(appid, uid string) *engine.Config {
+	if c.Engine != nil {
+		return c.Engine
+	}
+	if c.EngineCluster != nil {
+		return c.EngineCluster.PickOneFor(appid, uid)
+	}
+	return nil
 }
 
 type QVConfig struct {
