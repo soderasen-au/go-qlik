@@ -22,6 +22,7 @@ type DuplicateTask struct {
 }
 
 func (t *DuplicateTask) Run() *util.Result {
+	t.Logger.Info().Msgf("duplicating app: %s", t.AppId)
 	app, res := t.Script.Env.QrsClient.Copy(t.AppId, t.NewAppName)
 	if res != nil {
 		t.Logger.Error().Msgf("QrsClient.Copy failed: ", res.Error())

@@ -75,7 +75,9 @@ func (p *CsvReportPrinter) printObjectHeader() *util.Result {
 	err := p.Writer.Write(record)
 	if err != nil {
 		logger.Err(err).Msg("write header")
+		return util.Error("WriteCSV", err)
 	}
+	p.Writer.Flush()
 	if p.ColCnt != p.ObjLayout.HyperCube.Size.Cx && p.ObjLayout.HyperCube.Mode == "S" {
 		logger.Warn().Msgf("Col(%d) != hypercube.x(%d)", p.ColCnt, p.ObjLayout.HyperCube.Size.Cx)
 	}
@@ -155,6 +157,7 @@ func (p *CsvReportPrinter) printStackObject() *util.Result {
 			pageLogger.Err(err).Msg("GetHyperCubeData")
 			return res.With("GetHyperCubeData")
 		}
+		p.Writer.Flush()
 		pageLogger.Debug().Msg("end")
 	}
 
@@ -253,6 +256,7 @@ func (p *CsvReportPrinter) Print(r Report) *util.Result {
 		return res.With("printObject")
 	}
 
+	p.Writer.Flush()
 	err = ofs.Close()
 	if res != nil {
 		return util.Error("Close", err)
