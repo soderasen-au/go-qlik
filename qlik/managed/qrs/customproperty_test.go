@@ -74,3 +74,26 @@ func TestClient_AddAppCustomProperty(t *testing.T) {
 		t.Errorf("AddAppCustomProperty failed: %s", res.Error())
 	}
 }
+
+func TestClient_CreateAppCustomProperty(t *testing.T) {
+	client, logger, tearDown := setupTestSuite("../../../test/qrs/soderasen-au-qs.yaml", t)
+	defer tearDown(t)
+
+	cpd := CreateCustomPropertyDefinition{
+		ValueType:   "Text",
+		Name:        "test_cp_by_rac",
+		Description: "this is test cp created by rac",
+		ChoiceValues: []string{
+			"cp_v1", "cp_v2", "cp_v3",
+		},
+		ObjectTypes: []string{
+			CPOT_AppType, CPOT_StreamType, CPOT_UserType,
+		},
+	}
+	newCP, res := client.CreateCustomProperty(&cpd)
+	if res != nil {
+		t.Errorf("CreateAppCustomProperty failed: %s", res.Error())
+	}
+
+	logger.Info().Msgf("%s", util.JsonStr(newCP))
+}

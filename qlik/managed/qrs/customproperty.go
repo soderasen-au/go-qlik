@@ -3,9 +3,31 @@ package qrs
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/soderasen-au/go-qlik/qlik/rac"
 	"time"
 
 	"github.com/soderasen-au/go-common/util"
+)
+
+const (
+	CPOT_AnalyticConnectionType      = "AnalyticConnection"
+	CPOT_AppType                     = "App"
+	CPOT_ContentLibraryType          = "ContentLibrary"
+	CPOT_DataConnectionType          = "DataConnection"
+	CPOT_EngineServiceType           = "EngineService"
+	CPOT_ExtensionType               = "Extension"
+	CPOT_ExternalProgramTaskType     = "ExternalProgramTask"
+	CPOT_PrintingServiceType         = "PrintingService"
+	CPOT_ProxyServiceType            = "ProxyService"
+	CPOT_ReloadTaskType              = "ReloadTask"
+	CPOT_RepositoryServiceType       = "RepositoryService"
+	CPOT_SchedulerServiceType        = "SchedulerService"
+	CPOT_ServerNodeConfigurationType = "ServerNodeConfiguration"
+	CPOT_StreamType                  = "Stream"
+	CPOT_SystemNotificationType      = "SystemNotification"
+	CPOT_UserType                    = "User"
+	CPOT_UserSyncTaskType            = "UserSyncTask"
+	CPOT_VirtualProxyConfigType      = "VirtualProxyConfig"
 )
 
 // CustomPropertyDefinitionCondensed is used to decribe Qlik Sense CustomPropertyDefinition in Condensed format
@@ -51,6 +73,14 @@ type CustomPropertyDefinition struct {
 	ChoiceValues       []string  `json:"choiceValues"`
 	ID                 string    `json:"id"`
 	ObjectTypes        []string  `json:"objectTypes"`
+}
+
+type CreateCustomPropertyDefinition struct {
+	ValueType    string   `json:"valueType"`
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	ChoiceValues []string `json:"choiceValues"`
+	ObjectTypes  []string `json:"objectTypes"`
 }
 
 // CreateCustomProperty is used to create Qlik Sense CustomProperty
@@ -163,6 +193,31 @@ func (c *Client) GetCustomProperty(id string) (*CustomPropertyDefinition, *util.
 	resp, res := c.Get(fmt.Sprintf("/custompropertydefinition/%s", id), nil)
 	if res != nil {
 		return nil, res.With("GetCustomDefinition")
+	}
+
+	cps := CustomPropertyDefinition{}
+	err := json.Unmarshal(resp, &cps)
+	if err != nil {
+		return nil, util.Error("ParseCustomPropertyDefinition", err)
+	}
+
+	return &cps, nil
+}
+
+/*
+CreateCustomProperty create custom properties.
+
+cpd needs following fields:
+  - choiceValues;
+  - description (optional);
+  - name;
+  - objectTypes; ( const values start with CPOT_ defined in mod `qrs`)
+  - valueType (normally should be `Text`)
+*/
+func (c *Client) CreateCustomProperty(cpd *CreateCustomPropertyDefinition) (*CustomPropertyDefinition, *util.Result) {
+	resp, res := c.Post("/custompropertydefinition", cpd, rac.WithParam("privileges", "true"))
+	if res != nil {
+		return nil, res.With("PostCustomDefinition")
 	}
 
 	cps := CustomPropertyDefinition{}
