@@ -123,18 +123,23 @@ func (c Cluster) PickOneFor(appid, uid string) *Config {
 		return c.Nodes[0]
 	}
 
-	ret := c.Nodes[rand.Intn(nodeLen)]
+	pos := uint32(rand.Intn(nodeLen))
+	ret := c.Nodes[pos]
 	hasher := fnv.New32a()
 	switch c.Method {
 	case HashAppMethod:
 		if len(appid) > 0 {
-			hasher.Write([]byte(appid))
-			ret = c.Nodes[hasher.Sum32()%uint32(nodeLen)]
+			if _, err := hasher.Write([]byte(appid)); err == nil {
+				pos = hasher.Sum32() % uint32(nodeLen)
+				ret = c.Nodes[pos]
+			}
 		}
 	case HashUserMethod:
 		if len(uid) > 0 {
-			hasher.Write([]byte(uid))
-			ret = c.Nodes[hasher.Sum32()%uint32(nodeLen)]
+			if _, err := hasher.Write([]byte(uid)); err == nil {
+				pos = hasher.Sum32() % uint32(nodeLen)
+				ret = c.Nodes[pos]
+			}
 		}
 	}
 
