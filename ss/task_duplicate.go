@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	CMD_NAME_DUPLICATE = "duplicate"
-	StashKeyTmpDupApp  = "_tmp_dup_app"
+	CMD_NAME_DUPLICATE  = "duplicate"
+	StashKeyTmpDupApp   = "_tmp_dup_app"
+	StashKeyDupAppOwner = "_dup_app_owner_domain_id"
 )
 
 func init() {
@@ -25,13 +26,22 @@ func (t *DuplicateTask) Run() *util.Result {
 	t.Logger.Info().Msgf("duplicating app: %s", t.AppId)
 	app, res := t.Script.Env.QrsClient.Copy(t.AppId, t.NewAppName)
 	if res != nil {
-		t.Logger.Error().Msgf("QrsClient.Copy failed: ", res.Error())
+		t.Logger.Error().Msgf("QrsClient.Copy failed: %s", res.Error())
 		return res.With("QrsClient.Copy")
 	}
 	t.Script.Env.Stash(t.Name, app)
 	t.Logger.Info().Msgf("Stash[%s]: %s", t.Name, app.ID)
 	t.Script.Env.Stash(StashKeyTmpDupApp, app)
 	t.Logger.Info().Msgf("Stash[%s]: %s", StashKeyTmpDupApp, app.ID)
+
+	if ownerId, ok := t.Script.Env.UnstashString(StashKeyDupAppOwner); ok {
+		t.Logger.Info().Msgf("change app owner to %s", ownerId)
+		res = t.Script.Env.QrsClient.ChangeAppOwner(app.ID, ownerId)
+		if res != nil {
+			t.Logger.Error().Msgf("QrsClient.ChangeAppOwner: %s", res.Error())
+			return res.With("QrsClient.ChangeAppOwner")
+		}
+	}
 
 	return util.OK(t.Name)
 }

@@ -2,6 +2,7 @@ package qrs
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/soderasen-au/go-common/util"
@@ -79,4 +80,18 @@ func (c *Client) GetUsers() ([]User, *util.Result) {
 	}
 
 	return contents, nil
+}
+
+func (c *Client) GetUserByName(username string) (*UserCondensed, *util.Result) {
+	users, res := c.GetUserList()
+	if res != nil {
+		return nil, res.With("GetUserList")
+	}
+	for _, user := range users {
+		un := strings.ToLower(user.UserDirectory + "\\" + user.UserID)
+		if un == strings.ToLower(username) {
+			return &user, nil
+		}
+	}
+	return nil, util.MsgError("GetUserByName", "Not found")
 }
