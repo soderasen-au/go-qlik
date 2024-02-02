@@ -1423,7 +1423,7 @@ func (p *ExcelReportPrinter) Print(r Report) *util.Result {
 			return util.Error("Exists", err)
 		}
 		if ok {
-			logger.Info().Msgf("%s exists, appending sub report to it")
+			logger.Info().Msgf("%s exists, appending sub report to it", *rResult.ReportFile)
 			f, err = excelize.OpenFile(*rResult.ReportFile)
 			if err != nil {
 				logger.Err(err).Msgf("couldn't open existing report: %s", *rResult.ReportFile)
