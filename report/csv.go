@@ -11,11 +11,13 @@ import (
 
 type CsvReportPrinter struct {
 	ReportPrinterBase
-	ObjId     string
-	ObjLayout *engine.ObjectLayoutEx
-	Writer    *csv.Writer
-	ColCnt    int
-	RowCnt    int
+	ObjId          string
+	ObjLayout      *engine.ObjectLayoutEx
+	Writer         *csv.Writer
+	ColCnt         int
+	RowCnt         int
+	Cube2report    map[int]int
+	Cube2CustomFmt map[int]*ColumnHeaderFormat
 }
 
 func NewCsvReportPrinter() *CsvReportPrinter {
@@ -34,13 +36,18 @@ func (p *CsvReportPrinter) printObjectHeader() *util.Result {
 
 	logger := p.Logger.With().Str("print", "header").Logger()
 	DimCnt := len(p.ObjLayout.HyperCube.DimensionInfo)
-	record := make([]string, 0)
+
+	ColumnOrder := p.ObjLayout.HyperCube.ColumnOrder
+	if ColumnOrder == nil || len(ColumnOrder) == 0 {
+		ColumnOrder = p.ObjLayout.HyperCube.EffectiveInterColumnSortOrder
+	}
+
 	var colInfo *engine.ColumnInfo
 	p.ObjLayout.ColumnInfos = make([]*engine.ColumnInfo, 0)
-	if p.ObjLayout.HyperCube.ColumnOrder == nil || len(p.ObjLayout.HyperCube.ColumnOrder) == 0 {
-		p.ObjLayout.HyperCube.ColumnOrder = p.ObjLayout.HyperCube.EffectiveInterColumnSortOrder
-	}
-	for ci, colIx := range p.ObjLayout.HyperCube.ColumnOrder {
+	record := make([]string, len(ColumnOrder))
+	p.Cube2report = make(map[int]int) // cube column index => report column index
+	p.Cube2CustomFmt = make(map[int]*ColumnHeaderFormat)
+	for ci, colIx := range ColumnOrder {
 		expIx := colIx - DimCnt
 		if colIx < DimCnt {
 			dim := p.ObjLayout.HyperCube.DimensionInfo[colIx]
@@ -58,17 +65,23 @@ func (p *CsvReportPrinter) printObjectHeader() *util.Result {
 			colInfo = engine.NewColumnInfoFromMeasure(exp)
 		}
 		p.ObjLayout.ColumnInfos = append(p.ObjLayout.ColumnInfos, colInfo)
-
 		cellText := colInfo.FallbackTitle
+
+		p.Cube2report[p.ColCnt] = p.ColCnt
 		if p.R.ColumnHeaderFormats != nil {
 			if colHeaderFmt, ok := p.R.ColumnHeaderFormats[cellText]; ok {
+				logger.Info().Msgf(" - sense[%d]:%s => report[%d]", ci, cellText, colHeaderFmt.Order)
+				p.Cube2report[p.ColCnt] = colHeaderFmt.Order
+				p.Cube2CustomFmt[p.ColCnt] = &colHeaderFmt
 				if colHeaderFmt.Label != "" {
 					cellText = colHeaderFmt.Label
 				}
 			}
 		}
+
+		repIdx := p.Cube2report[p.ColCnt]
 		logger.Info().Msgf("header col: %d => %d: %s", ci, colIx, cellText)
-		record = append(record, cellText)
+		record[repIdx] = cellText
 		p.ColCnt++
 	}
 
@@ -147,8 +160,31 @@ func (p *CsvReportPrinter) printStackObject() *util.Result {
 		records := make([][]string, len(page.Matrix))
 		for ri, row := range page.Matrix {
 			records[ri] = make([]string, len(row))
-			for ci, cell := range row {
-				records[ri][ci] = cell.Text
+			for cubeColIx, cell := range row {
+				ci := p.Cube2report[cubeColIx]
+				if colFmt, ok := p.Cube2CustomFmt[cubeColIx]; ok {
+					if colFmt != nil {
+						if colFmt.NumFmt != "" {
+							txt, res := FormatNum(float64(cell.Num), colFmt.NumFmt)
+							if res != nil {
+								pageLogger.Error().Msgf("FormatNum: %s", res.Error())
+								records[ri][ci] = cell.Text
+							} else {
+								records[ri][ci] = txt
+							}
+						} else if colFmt.DateFmt != "" {
+							records[ri][ci] = FormatDate(float64(cell.Num), colFmt.DateFmt)
+						} else {
+							records[ri][ci] = cell.Text
+						}
+					} else {
+						pageLogger.Warn().Msgf("p.Cube2CustomFmt[%d] is empty", cubeColIx)
+						records[ri][ci] = cell.Text
+					}
+				} else {
+					pageLogger.Trace().Msgf("p.Cube2CustomFmt has no cube idx: %d", cubeColIx)
+					records[ri][ci] = cell.Text
+				}
 			}
 			p.RowCnt++
 		}
