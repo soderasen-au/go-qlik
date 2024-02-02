@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/soderasen-au/go-common/util"
+	"time"
 )
 
 const (
@@ -36,6 +37,7 @@ func (t *DuplicateTask) Run() *util.Result {
 
 	if ownerId, ok := t.Script.Env.UnstashString(StashKeyDupAppOwner); ok {
 		t.Logger.Info().Msgf("change app owner to %s", ownerId)
+		time.Sleep(3 * time.Second)
 		res = t.Script.Env.QrsClient.ChangeAppOwner(app.ID, ownerId)
 		if res != nil {
 			t.Logger.Error().Msgf("QrsClient.ChangeAppOwner: %s", res.Error())
