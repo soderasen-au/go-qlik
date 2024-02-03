@@ -89,7 +89,7 @@ func (env *ExecEnv) OpenDoc(appid string) *util.Result {
 
 	env.Logger().Debug().Msgf("EngineConn[%s] at [%s]", env.EngineConn.Cfg.AppID, env.EngineConn.Cfg.EngineURI)
 	env.AppID = appid
-	env.Logger().Debug().Msgf("OpenDoc: %s", env.AppID)
+	env.Logger().Debug().Msgf("opendoc %s for %s\\%s", appid, env.EngineConn.Cfg.UserDirectory, env.EngineConn.Cfg.UserName)
 	env.Doc, err = env.EngineConn.Global.OpenDoc(engine.ConnCtx, env.AppID, "", "", "", false)
 	if err != nil {
 		return util.Error("OpenDoc", err)
