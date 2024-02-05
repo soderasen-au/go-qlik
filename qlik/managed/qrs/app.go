@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -153,7 +152,7 @@ func (c *Client) Import(qvfPath, fallbackName string, skipData bool) (*App, *uti
 	}
 	defer file.Close()
 
-	fileContents, err := ioutil.ReadAll(file)
+	fileContents, err := io.ReadAll(file)
 	if err != nil {
 		return nil, util.Error("Can't read file", err)
 	}
@@ -168,18 +167,21 @@ func (c *Client) Import(qvfPath, fallbackName string, skipData bool) (*App, *uti
 	if err != nil {
 		return nil, util.Error("Can't create multipart writer", err)
 	}
-	part.Write(fileContents)
+	_, err = part.Write(fileContents)
+	if err != nil {
+		return nil, util.Error("WriteFileContents", err)
+	}
 	err = writer.Close()
 	if err != nil {
 		return nil, util.Error("Can't close multipart writer", err)
 	}
 
 	//Send Http request
-	_, resp, err := c.client.Do(http.MethodPost, "app/upload", body,
+	_, resp, res := c.client.Do(http.MethodPost, "app/upload", body,
 		rac.WithHeader("Content-Type", writer.FormDataContentType()),
 		rac.WithParam("name", fallbackName), rac.WithParam("keepData", keepData))
-	if err != nil {
-		return nil, util.Error("QRS request failed", err)
+	if res != nil {
+		return nil, res.With("rac.Client.Do")
 	}
 
 	//Cast Body into struct

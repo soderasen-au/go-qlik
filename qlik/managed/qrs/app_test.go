@@ -33,7 +33,7 @@ func setupTestSuite(conf string, t *testing.T) (*Client, *zerolog.Logger, func(t
 		t.Errorf("can't parse config file: %s", res.Error())
 		return nil, nil, nil
 	}
-	_logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}.Out).Level(zerolog.TraceLevel)
+	_logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}.Out).Level(zerolog.DebugLevel)
 	client.SetLogger(&_logger)
 	_logger.Info().Msgf("test in %s using %s", wd, conf)
 
