@@ -24,6 +24,9 @@ type CloudJwtConfig struct {
 	UserName         string `json:"user_id,omitempty" yaml:"user_id,omitempty" bson:"user_name,omitempty"`
 	UserEmail        string `json:"user_email,omitempty" yaml:"user_email,omitempty" bson:"user_email,omitempty"`
 	UserSub          string `json:"user_sub,omitempty" yaml:"user_sub,omitempty" bson:"user_sub,omitempty"`
+
+	//assgined when Cloud session is created on-the-fly, otherwise it's empty
+	CsrfToken string `json:"csrf_token,omitempty" yaml:"csrf_token,omitempty" bson:"csrf_token,omitempty"`
 }
 
 func (c CloudJwtConfig) IsValid() bool {

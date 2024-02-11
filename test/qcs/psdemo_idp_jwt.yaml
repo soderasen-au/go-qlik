@@ -1,0 +1,24 @@
+base_url: "https://psdemo.eu.qlikcloud.com"
+is_cloud: true
+virtual_proxy: "/"
+api_prefix: "/api/v1"
+auth:
+  method: jwt
+  user:
+    userId: "demoString"
+    userDirectory: "demoString"
+  certs:
+    client: ../../test/certs/psdemo/client.pem
+    client_key: ../../test/certs/psdemo/client_key.pem
+    root_ca: ../../test/certs/psdemo/root.pem
+  cloud_jwt:
+    key_id: "psdemo.eu.qlikcloud.com"
+    issuer: "psdemo.eu.qlikcloud.com"
+    web_integration_id: "Ffew3J6gRaHJkyB0QIRLKglgP8Ieloa0"
+    user_id: "Soderasen AU"
+    user_email: "soderasen.au@outlook.com"
+    user_sub: "IeDc3KV-q6YsB5Nq_zvjJWuHR5v4r_v3"
+extra_tls_config:
+  InsecureSkipVerify: true
+timeout_sec: 300
+log_file_name: "test_psdemo.log"

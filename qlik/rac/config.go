@@ -2,6 +2,7 @@ package rac
 
 import (
 	"crypto/tls"
+	"github.com/soderasen-au/go-common/util"
 	"net/http"
 )
 
@@ -24,4 +25,8 @@ type Config struct {
 	ExtraHeaders   map[string]string `json:"extra_headers,omitempty" yaml:"extra_headers,omitempty" bson:"extra_headers,omitempty"`
 	LogFileName    *string           `json:"log_file_name,omitempty" yaml:"log_file_name,omitempty" bson:"log_file_name,omitempty"`
 	Cookie         http.CookieJar    `json:"-" yaml:"-" bson:"-"`
+}
+
+func (c Config) IsForCloud() bool {
+	return util.MaybeNil(c.IsCloud)
 }

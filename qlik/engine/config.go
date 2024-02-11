@@ -3,6 +3,7 @@ package engine
 import (
 	"hash/fnv"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"path"
 	"strings"
@@ -46,6 +47,8 @@ type Config struct {
 	JWT                string              `json:"jwt,omitempty" yaml:"jwt,omitempty" bson:"jwt,omitempty"`
 	Certs              crypto.Certificates `json:"certs,omitempty" yaml:"certs,omitempty" bson:"certs,omitempty"`
 	RandomProxySession bool                `json:"random_proxy_session" yaml:"random_proxy_session" bson:"random_proxy_session"`
+
+	Cookie http.CookieJar `json:"-" yaml:"-" bson:"-"` // used when connect to cloud
 }
 
 func (cfg *Config) QCSEngineURIAppendAppID(appid string) *util.Result {

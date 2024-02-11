@@ -265,5 +265,11 @@ func (c *RestApiClient) StartCloudJWTSession() *util.Result {
 	}
 
 	c.csrfToken = resp.Header.Get("qlik-csrf-token")
+	c.Config.Auth.CloudJwt.CsrfToken = c.csrfToken
+
 	return nil
+}
+
+func (c *RestApiClient) IsCloud() bool {
+	return c.Config.IsForCloud()
 }
