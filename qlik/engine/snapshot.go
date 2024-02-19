@@ -51,14 +51,15 @@ func ObjSnapshoter(e ObjWalkEntry) (*ObjWalkResult[ObjectSnapshot], *util.Result
 
 	var cube *enigma.HyperCube
 	genericObj, ok := obj.Interface().(*enigma.GenericObject)
-	if ok && genericObj != nil {
-		cube, res = GetHyperCube(genericObj, enigma.Size{Cx: -1, Cy: 100})
-		if res != nil {
-			return nil, res.With("GetHyperCube")
-		}
-		if cube != nil && cube.Size != nil {
-			e.Logger.Trace().Msgf(" - [%s/%s] size: (%d, %d)", util.MaybeNil(title), util.MaybeNil(desc), cube.Size.Cy, cube.Size.Cx)
-		}
+	if !ok || genericObj == nil {
+		return nil, util.MsgError("GetHyperCube", "invalid object object")
+	}
+	cube, res = GetHyperCube(genericObj, enigma.Size{Cx: -1, Cy: 100})
+	if res != nil {
+		return nil, res.With("GetHyperCube")
+	}
+	if cube != nil && cube.Size != nil {
+		e.Logger.Trace().Msgf(" - [%s/%s] size: (%d, %d)", util.MaybeNil(title), util.MaybeNil(desc), cube.Size.Cy, cube.Size.Cx)
 	}
 
 	objShot := ObjWalkResult[ObjectSnapshot]{
