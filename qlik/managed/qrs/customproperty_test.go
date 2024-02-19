@@ -7,7 +7,7 @@ import (
 )
 
 func TestClient_GetCustomPropertyList(t *testing.T) {
-	client, logger, tearDown := setupTestSuite("../../../test/qrs/localhost.yaml", t)
+	client, logger, tearDown := setupTestSuite("../../../test/qrs/soderasen-au-qs.yaml", t)
 	defer tearDown(t)
 
 	cps, res := client.GetCustomPropertyList()
