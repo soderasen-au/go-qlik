@@ -1,0 +1,9 @@
+engine_uri: wss://soderasen-au-qs:4747
+server_type: on_prem
+auth_mode: cert
+user_id: qlikadmin
+user_ad: soderasen-au-qs
+certs:
+  client: \\SODERASEN-AU-PC\certs\soderasen-au.com\qlik\client.pem
+  client_key: \\SODERASEN-AU-PC\certs\soderasen-au.com\qlik\client_key.pem
+  root_ca: \\SODERASEN-AU-PC\certs\soderasen-au.com\qlik\root.pem

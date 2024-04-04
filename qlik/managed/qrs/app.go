@@ -310,6 +310,21 @@ func (c *Client) GetAppList() ([]App, *util.Result) {
 	return apps, nil
 }
 
+func (c *Client) GetAppHubList() ([]App, *util.Result) {
+	resp, res := c.Get("/app/hublist/full", nil)
+	if res != nil {
+		return nil, res.With("GetHubList/Full")
+	}
+
+	apps := make([]App, 0)
+	err := json.Unmarshal(resp, &apps)
+	if err != nil {
+		return nil, util.Error("GetAppHubList", err)
+	}
+
+	return apps, nil
+}
+
 func (c *Client) GetApps() ([]AppCondensed, *util.Result) {
 	resp, res := c.Get("/app")
 	if res != nil {

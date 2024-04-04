@@ -1,10 +1,13 @@
 package qrs
 
 import (
-	"gopkg.in/yaml.v3"
+	"fmt"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/soderasen-au/go-common/util"
+	"gopkg.in/yaml.v3"
 
 	"github.com/rs/zerolog"
 )
@@ -92,4 +95,21 @@ func TestClient_Copy(t *testing.T) {
 	}
 
 	logger.Info().Msgf("duplicated app [%s]: `%s`, owned by `%s\\%s`", app.ID, app.Name, app.Owner.UserDirectory, app.Owner.UserID)
+}
+
+func TestClient_GetAppHubList(t *testing.T) {
+	client, logger, tearDown := setupTestSuite("../../../test/qrs/soderasen-au.com.yaml", t)
+	if t.Failed() {
+		return
+	}
+	defer tearDown(t)
+
+	apps, res := client.GetAppHubList()
+	if res != nil {
+		logger.Error().Msg(res.Error())
+		t.Errorf("failed: %s", res.Error())
+		return
+	}
+
+	fmt.Println(util.JsonStr(apps))
 }
