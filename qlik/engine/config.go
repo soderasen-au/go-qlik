@@ -9,8 +9,9 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-
+	"github.com/rs/zerolog"
 	"github.com/soderasen-au/go-common/crypto"
+	"github.com/soderasen-au/go-common/loggers"
 	"github.com/soderasen-au/go-common/util"
 )
 
@@ -105,16 +106,29 @@ func (c Config) GetAppUrl() (string, *util.Result) {
 	appUrl.Scheme = "https"
 	return appUrl.String(), nil
 }
+func (cfg Config) GetHttpsBaseUrl() (*url.URL, *util.Result) {
+	u, err := url.Parse(cfg.EngineURI)
+	if err != nil {
+		return nil, util.Error("ParseBaseURI", err)
+	}
+	u.Scheme = "https"
+	u.Path = strings.TrimSuffix(u.Path, "/")
+	return u, nil
+}
 
 const (
 	RandomMethod   string = "random"
 	HashAppMethod  string = "hash_app"
 	HashUserMethod string = "hash_user"
+	InMemAppMethod string = "in_mem_app"
 )
 
 type Cluster struct {
-	Method string    `json:"method" yaml:"method"`
-	Nodes  []*Config `json:"nodes" yaml:"nodes"`
+	Method      string    `json:"method" yaml:"method"`
+	Nodes       []*Config `json:"nodes" yaml:"nodes"`
+	client      *HttpClient
+	inMemAppMap map[string]int
+	Logger      *zerolog.Logger
 }
 
 func (c Cluster) PickOneFor(appid, uid string) *Config {
@@ -126,24 +140,70 @@ func (c Cluster) PickOneFor(appid, uid string) *Config {
 		return c.Nodes[0]
 	}
 
-	pos := uint32(rand.Intn(nodeLen))
-	ret := c.Nodes[pos]
+	if c.Logger == nil {
+		c.Logger = loggers.NullLogger
+	}
+
+	ret := c.Nodes[0]
 	hasher := fnv.New32a()
 	switch c.Method {
+	case RandomMethod:
+		ret = c.Nodes[rand.Intn(nodeLen)]
 	case HashAppMethod:
 		if len(appid) > 0 {
-			if _, err := hasher.Write([]byte(appid)); err == nil {
-				pos = hasher.Sum32() % uint32(nodeLen)
-				ret = c.Nodes[pos]
-			}
+			_, _ = hasher.Write([]byte(appid))
+			ret = c.Nodes[hasher.Sum32()%uint32(nodeLen)]
 		}
 	case HashUserMethod:
 		if len(uid) > 0 {
-			if _, err := hasher.Write([]byte(uid)); err == nil {
-				pos = hasher.Sum32() % uint32(nodeLen)
-				ret = c.Nodes[pos]
-			}
+			_, _ = hasher.Write([]byte(uid))
+			ret = c.Nodes[hasher.Sum32()%uint32(nodeLen)]
 		}
+	case InMemAppMethod:
+		if len(appid) > 0 {
+			ret = c.pickOneInMemAppFor(appid)
+		}
+	}
+
+	return ret
+}
+
+func (c Cluster) pickOneInMemAppFor(appid string) *Config {
+	var res *util.Result
+	if c.client == nil {
+		c.client, res = NewHttpClient(*c.Nodes[0])
+		if res != nil {
+			c.Logger.Error().Msgf("NewHttpClient %v, err: %s", c.Nodes[0], res.Error())
+			return nil
+		}
+	}
+	if c.inMemAppMap == nil {
+		c.inMemAppMap = make(map[string]int)
+	}
+
+	for node, cfg := range c.Nodes {
+		c.client.BaseUrl, res = cfg.GetHttpsBaseUrl()
+		if res != nil {
+			c.Logger.Error().Msgf("GetHttpsBaseUrl %v, err: %s", cfg, res.Error())
+			continue
+		}
+		hi, res := c.client.GetHealthInfo()
+		if res != nil {
+			c.Logger.Error().Msgf("GetHttpsBaseUrl %v, err: %s", cfg, res.Error())
+			continue
+		}
+		for _, aid := range hi.Apps.InMemoryDocs {
+			c.Logger.Trace().Msgf("in mem app[%s] => %s", aid, cfg.EngineURI)
+			c.inMemAppMap[aid] = node
+		}
+	}
+
+	ret := c.Nodes[rand.Intn(len(c.Nodes))]
+	if node, ok := c.inMemAppMap[appid]; ok {
+		ret = c.Nodes[node]
+		c.Logger.Debug().Msgf("found in-mem app %s on %s", appid, ret.EngineURI)
+	} else {
+		c.Logger.Debug().Msgf("not found in-mem app %s, use random one", appid)
 	}
 
 	return ret
