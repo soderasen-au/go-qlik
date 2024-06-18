@@ -1,6 +1,6 @@
 module github.com/soderasen-au/go-qlik
 
-go 1.20
+go 1.22
 
 require (
 	github.com/eventials/go-tus v0.0.0-20220610120217-05d0564bb571
@@ -11,6 +11,7 @@ require (
 	github.com/rs/zerolog v1.31.0
 	github.com/soderasen-au/go-common v0.6.1
 	github.com/xuri/excelize/v2 v2.8.0
+	golang.org/x/sync v0.1.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
