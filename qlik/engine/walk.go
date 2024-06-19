@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,13 +16,23 @@ import (
 )
 
 type (
+	FilterOptions struct {
+		SheetBlackList  []string `json:"sheet_black_list,omitempty" yaml:"sheet_black_list"`
+		ObjectBlackList []string `json:"object_black_list,omitempty" yaml:"object_black_list"`
+		ObjectWhiteList []string `json:"object_white_list,omitempty" yaml:"object_white_list"`
+
+		sheetBlackMap  map[string]bool
+		objectBlackMap map[string]bool
+		objectWhiteMap map[string]bool
+	}
+
 	WalkOptions struct {
-		Sync           bool     `json:"sync" yaml:"sync"`
-		MaxWorkers     int      `json:"max_workers" yaml:"max_workers"`
-		IgnoreError    bool     `json:"ignore_error" yaml:"ignore_error"`
-		OpendocRetries int      `json:"opendoc_retries" yaml:"opendoc_retries"`
-		RetryDelay     int      `json:"retry_delay" yaml:"retry_delay"`
-		WhiteList      []string `json:"white_list,omitempty" yaml:"white_list,omitempty" bson:"white_list,omitempty"`
+		Sync           bool           `json:"sync" yaml:"sync"`
+		MaxWorkers     int            `json:"max_workers" yaml:"max_workers"`
+		IgnoreError    bool           `json:"ignore_error" yaml:"ignore_error"`
+		OpendocRetries int            `json:"opendoc_retries" yaml:"opendoc_retries"`
+		RetryDelay     int            `json:"retry_delay" yaml:"retry_delay"`
+		Filter         *FilterOptions `json:"filter" yaml:"filter"`
 	}
 
 	ObjWalkEntry struct {
@@ -66,6 +77,53 @@ type (
 	}
 )
 
+func (f *FilterOptions) BuildMap() {
+	if f.SheetBlackList != nil {
+		f.sheetBlackMap = make(map[string]bool)
+		for _, sheet := range f.SheetBlackList {
+			f.sheetBlackMap[sheet] = true
+		}
+	}
+
+	if f.ObjectBlackList != nil {
+		f.objectBlackMap = make(map[string]bool)
+		for _, object := range f.ObjectBlackList {
+			f.objectBlackMap[object] = true
+		}
+	}
+
+	if f.ObjectWhiteList != nil {
+		f.objectWhiteMap = make(map[string]bool)
+		for _, object := range f.ObjectWhiteList {
+			f.objectWhiteMap[object] = true
+		}
+	}
+}
+
+func (f *FilterOptions) IsSheetBlackListed(sheet string) bool {
+	if f.sheetBlackMap == nil {
+		return false
+	}
+	_, ok := f.sheetBlackMap[sheet]
+	return ok
+}
+
+func (f *FilterOptions) IsObjectBlackListed(object string) bool {
+	if f.objectBlackMap == nil {
+		return false
+	}
+	_, ok := f.objectBlackMap[object]
+	return ok
+}
+
+func (f *FilterOptions) IsObjectWhiteListed(object string) bool {
+	if f.objectWhiteMap == nil {
+		return false
+	}
+	_, ok := f.objectWhiteMap[object]
+	return ok
+}
+
 func DefaultWalkOptions() *WalkOptions {
 	return &WalkOptions{
 		Sync:           false,
@@ -73,7 +131,7 @@ func DefaultWalkOptions() *WalkOptions {
 		IgnoreError:    false,
 		OpendocRetries: 3,
 		RetryDelay:     30,
-		WhiteList:      make([]string, 0),
+		Filter:         &FilterOptions{},
 	}
 }
 
@@ -84,11 +142,15 @@ func WalkOptionsForHuge() *WalkOptions {
 		IgnoreError:    true,
 		OpendocRetries: 5,
 		RetryDelay:     60,
-		WhiteList:      make([]string, 0),
+		Filter:         &FilterOptions{},
 	}
 }
 
 func FlattenObject[T any](obj *ObjWalkResult[T], m ListWalkResult[T]) {
+	if obj == nil || obj.Info == nil {
+		return
+	}
+
 	m[obj.Info.Id] = obj
 	if obj.ChildResults != nil {
 		for _, c := range obj.ChildResults {
@@ -211,6 +273,13 @@ func WalkApp[T any](doc *enigma.Doc, cfg MixedConfig, opts *WalkOptions, walkers
 				ilog.Info().Msg("walking item ...")
 
 				if item.Info.Type == "sheet" {
+					if opts.Filter != nil && opts.Filter.SheetBlackList != nil {
+						ilog.Info().Msgf("Filtering sheet: %s", item.Info.Id)
+						if opts.Filter.IsSheetBlackListed(item.Info.Id) {
+							ilog.Info().Msgf(" - sheet: %s is black listed, ignore it", item.Info.Id)
+							continue
+						}
+					}
 					sheetObj, err := doc.GetObject(ConnCtx, item.Info.Id)
 					if err != nil {
 						ilog.Error().Msgf("GetSheetObject error: %s", err.Error())
@@ -331,6 +400,23 @@ func RecurWalkObject[T any](e ObjWalkEntry, walker ObjWalkFunc[T]) (*ObjWalkResu
 	logger := e.Logger.With().
 		Str(qid+"-walk", "RecurWalkObject").
 		Logger()
+
+	if e.Filter != nil && strings.ToLower(qtype) != "sheet" {
+		if e.Filter.ObjectBlackList != nil {
+			logger.Info().Msgf("filtering with black list, object id: %s", qid)
+			if e.Filter.IsObjectBlackListed(qid) {
+				logger.Info().Msgf(" - object is black listed, ignore it")
+				return nil, nil
+			}
+		}
+		if e.Filter.ObjectWhiteList != nil {
+			logger.Info().Msgf("filtering with white list, object id: %s", qid)
+			if !e.Filter.IsObjectWhiteListed(qid) {
+				logger.Info().Msgf(" - object is NOT white listed, ignore it")
+				return nil, nil
+			}
+		}
+	}
 
 	emptyObjShot := ObjWalkResult[T]{
 		Info:         e.Info,
