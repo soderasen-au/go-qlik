@@ -58,5 +58,11 @@ func TestWalkApp_1(t *testing.T) {
 		return &shot, nil
 	}
 
-	WalkApp(doc, walkers, logger)
+	mc := MixedConfig{
+		AppId:         "",
+		OnPrem:        &cfg,
+		OnPremCluster: nil,
+		QCS:           nil,
+	}
+	WalkApp(doc, mc, nil, walkers, logger)
 }

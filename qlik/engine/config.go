@@ -113,6 +113,9 @@ func (cfg Config) GetHttpsBaseUrl() (*url.URL, *util.Result) {
 	}
 	u.Scheme = "https"
 	u.Path = strings.TrimSuffix(u.Path, "/")
+	if strings.ToLower(u.Path) == "/app" {
+		u.Path = ""
+	}
 	return u, nil
 }
 

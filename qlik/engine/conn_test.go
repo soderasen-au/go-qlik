@@ -2,59 +2,36 @@ package engine
 
 import (
 	"fmt"
-	"github.com/rs/zerolog"
-	"github.com/soderasen-au/go-common/crypto"
-	"github.com/soderasen-au/go-common/util"
-	"github.com/soderasen-au/go-qlik/qlik/rac"
-	"gopkg.in/yaml.v3"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/soderasen-au/go-common/util"
+	"gopkg.in/yaml.v3"
+
+	"github.com/soderasen-au/go-qlik/qlik/rac"
 )
 
 func TestNewConn(t *testing.T) {
-	//logger, err := loggers.GetLogger("../../test/log.json")
-	//if err != nil {
-	//	t.Errorf("%s error: %s", "GetLogger", err.Error())
-	//}
-
-	cfg := Config{
-		EngineURI:     "wss://soderasen-au-qs:4747/app",
-		AppID:         "7ec5decd-c6ca-432c-a1dc-9703ebd873a7",
-		UserName:      "li",
-		UserDirectory: "soderasen-au-qs",
-		AuthMode:      "cert",
-		ServerType:    "on_prem",
-		Certs: crypto.Certificates{
-			ClientFile:    "\\\\SODERASEN-AU-PC\\certs\\soderasen-au.com\\qlik\\client.pem",
-			ClientkeyFile: "\\\\SODERASEN-AU-PC\\certs\\soderasen-au.com\\qlik\\client_key.pem",
-			CAFile:        "\\\\SODERASEN-AU-PC\\certs\\soderasen-au.com\\qlik\\root.pem",
-		},
-		RandomProxySession: true,
-	}
-
-	conn, err := NewConn(cfg)
-	if err != nil {
-		t.Errorf("%s error: %s", "NewConn", err.Error())
+	conn, logger, _ := setupTestSuiteConn("../../test/engine/soderasen-au-qs.yaml", t)
+	if conn == nil {
+		logger.Fatal().Msgf("conn is nil")
+		return
 	}
 	defer conn.Global.DisconnectFromServer()
 
-	doc, err := conn.Global.OpenDoc(ConnCtx, "071f466e-c592-4f42-bd1b-b773329bb0e0", "", "", "", false)
+	ver, err := conn.Global.EngineVersion(ConnCtx)
+	if err != nil {
+		logger.Fatal().Msgf("engine version error: %v", err)
+		t.Errorf("error %v", err)
+		return
+	}
+	logger.Info().Msgf("engine version: %v", ver)
+
+	_, err = conn.Global.OpenDoc(ConnCtx, "2dea34ed-10db-4463-991c-3f8ba6176476", "", "", "", false)
 	if err != nil {
 		t.Errorf("%s error: %s", "OpenDoc", err.Error())
-	}
-
-	obj, err := doc.GetObject(ConnCtx, "yDTf")
-	if err != nil {
-		t.Errorf("%s error: %s", "GetObject", err.Error())
-	}
-
-	layout, err := obj.GetLayout(ConnCtx)
-	if err != nil {
-		t.Errorf("%s error: %s", "GetLayout", err.Error())
-	}
-	if layout.HyperCube != nil {
-		fmt.Printf("sz: cols: %d, rows: %d\n", layout.HyperCube.Size.Cx, layout.HyperCube.Size.Cy)
 	}
 }
 

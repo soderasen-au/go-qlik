@@ -8,7 +8,7 @@ import (
 )
 
 func TestHttpClient_GetHealthInfo(t *testing.T) {
-	client, logger, tearDown := setupTestSuite("../../test/engine/soderasen-au-qs.yaml", t)
+	client, logger, tearDown := setupTestSuiteHttpClient("../../test/engine/soderasen-au-qs.yaml", t)
 	if t.Failed() {
 		return
 	}
