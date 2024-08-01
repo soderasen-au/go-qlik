@@ -2,10 +2,12 @@ package qrs
 
 import (
 	"encoding/json"
-	"strings"
+	"fmt"
 	"time"
 
 	"github.com/soderasen-au/go-common/util"
+
+	"github.com/soderasen-au/go-qlik/qlik/rac"
 )
 
 type User struct {
@@ -82,16 +84,21 @@ func (c *Client) GetUsers() ([]User, *util.Result) {
 	return contents, nil
 }
 
-func (c *Client) GetUserByName(username string) (*UserCondensed, *util.Result) {
-	users, res := c.GetUserList()
+func (c *Client) GetUserByDomainName(dir string, id string) (*User, *util.Result) {
+	filter := fmt.Sprintf("userDirectory eq '%s' and userId eq '%s'", dir, id)
+	resp, res := c.Get("/user/full", rac.WithParam("filter", filter))
 	if res != nil {
-		return nil, res.With("GetUserList")
+		return nil, res.With("get users")
 	}
-	for _, user := range users {
-		un := strings.ToLower(user.UserDirectory + "\\" + user.UserID)
-		if un == strings.ToLower(username) {
-			return &user, nil
-		}
+
+	var contents []*User
+	err := json.Unmarshal(resp, &contents)
+	if err != nil {
+		return nil, util.Error("parse users", err)
 	}
-	return nil, util.MsgError("GetUserByName", "Not found")
+	if len(contents) < 1 {
+		return nil, util.MsgError("check", "user not found")
+	}
+
+	return contents[0], nil
 }

@@ -1,0 +1,17 @@
+base_url: https://localhost:4242
+is_cloud: false
+virtual_proxy: /
+api_prefix: qrs
+auth:
+  method: cert
+  user:
+    userId: qliksa
+    userDirectory: sa-minipc
+  certs:
+    client: \\sa-minipc\certs\soderasen-au.com\qlik\client.pem
+    client_key: \\sa-minipc\certs\soderasen-au.com\qlik\client_key.pem
+    root_ca: \\sa-minipc\certs\soderasen-au.com\qlik\root.pem
+extra_tls_config:
+  insecure_skip_verify: true
+timeout_sec: 300
+log_file_name: "qrs.log"
