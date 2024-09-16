@@ -3,11 +3,12 @@ package rac
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/soderasen-au/go-common/util"
 	"io"
 	"net/http"
 	"path"
 	"strings"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 const (
@@ -123,6 +124,9 @@ func (c *RestApiClient) NewRawRequest(method, url string, body interface{}) (*ht
 	var req *http.Request
 	if readerBody, isIOReader := body.(io.Reader); isIOReader {
 		req, err = http.NewRequest(method, url, readerBody)
+	} else if rawBody, isRawBody := body.([]byte); isRawBody {
+		bodyReader := bytes.NewBuffer(rawBody)
+		req, err = http.NewRequest(method, url, bodyReader)
 	} else if body != nil {
 		marshaledBody, _err := json.Marshal(body)
 		if _err != nil {
