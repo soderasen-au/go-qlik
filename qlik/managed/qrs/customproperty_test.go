@@ -1,9 +1,10 @@
 package qrs
 
 import (
-	"github.com/soderasen-au/go-common/util"
 	"reflect"
 	"testing"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 func TestClient_GetCustomPropertyList(t *testing.T) {

@@ -3,10 +3,12 @@ package report
 import (
 	"encoding/csv"
 	"fmt"
-	"github.com/soderasen-au/go-common/util"
-	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"os"
 	"strings"
+
+	"github.com/soderasen-au/go-common/util"
+
+	"github.com/soderasen-au/go-qlik/qlik/engine"
 )
 
 type CsvReportPrinter struct {

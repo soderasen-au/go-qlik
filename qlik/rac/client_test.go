@@ -1,12 +1,13 @@
 package rac
 
 import (
-	"github.com/rs/zerolog"
-	"gopkg.in/yaml.v3"
 	"net/http"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/rs/zerolog"
+	"gopkg.in/yaml.v3"
 )
 
 func setupTestSuite(conf string, t *testing.T) (*RestApiClient, *zerolog.Logger, func(t2 *testing.T)) {

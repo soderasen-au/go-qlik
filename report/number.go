@@ -2,10 +2,11 @@ package report
 
 import (
 	"fmt"
-	"github.com/soderasen-au/go-common/util"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 func ParseExcelDateTime(serialNumber float64) time.Time {

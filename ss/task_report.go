@@ -2,7 +2,9 @@ package ss
 
 import (
 	"fmt"
+
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/qlik/managed/qrs"
 	"github.com/soderasen-au/go-qlik/report"
 )

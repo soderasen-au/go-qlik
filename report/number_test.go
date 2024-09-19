@@ -2,9 +2,10 @@ package report
 
 import (
 	"fmt"
-	"github.com/soderasen-au/go-common/util"
 	"reflect"
 	"testing"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 func TestFormatNum(t *testing.T) {

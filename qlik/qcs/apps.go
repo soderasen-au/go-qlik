@@ -12,6 +12,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 )
 

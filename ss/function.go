@@ -3,6 +3,7 @@ package ss
 import (
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/report"
 )
 

@@ -11,8 +11,9 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/soderasen-au/go-common/util"
-	"github.com/soderasen-au/go-qlik/qlik/rac"
 	"gopkg.in/yaml.v3"
+
+	"github.com/soderasen-au/go-qlik/qlik/rac"
 )
 
 var (

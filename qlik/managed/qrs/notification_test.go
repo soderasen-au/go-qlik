@@ -1,8 +1,9 @@
 package qrs
 
 import (
-	"github.com/soderasen-au/go-common/util"
 	"testing"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 func TestClient_Subscribe(t *testing.T) {

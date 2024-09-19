@@ -2,7 +2,9 @@ package ss
 
 import (
 	"fmt"
+
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/qlik/managed/qrs"
 )
 
@@ -44,7 +46,7 @@ func (t *Del_AppTask) Run() *util.Result {
 	t.Logger.Info().Msgf("deleting app: %s", t.AppId)
 	res := t.Script.Env.QrsClient.DeleteApp(t.AppId)
 	if res != nil {
-		t.Logger.Error().Msgf("QrsClient.DeleteApp failed: ", res.Error())
+		t.Logger.Error().Msgf("QrsClient.DeleteApp failed: %s", res.Error())
 		return res.With("QrsClient.DeleteApp")
 	}
 

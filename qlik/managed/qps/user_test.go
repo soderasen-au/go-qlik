@@ -1,8 +1,9 @@
 package qps
 
 import (
-	"github.com/soderasen-au/go-common/util"
 	"testing"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 func TestClient_GetWebTicket(t *testing.T) {

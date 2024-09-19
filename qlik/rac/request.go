@@ -174,7 +174,11 @@ func (c *RestApiClient) DoRequest(req *http.Request) (*http.Response, []byte, *u
 	if err != nil {
 		return nil, nil, util.Error("ReadResp", err)
 	}
-	c.Logger.Trace().Msgf("Response <=== %v", string(buf))
+	if len(buf) < 100 {
+		c.Logger.Trace().Msgf("Response <=== %v", string(buf))
+	} else {
+		c.Logger.Trace().Msgf("Response <<== %v", string(buf)[:100])
+	}
 
 	return resp, buf, nil
 }

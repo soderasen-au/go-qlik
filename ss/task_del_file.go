@@ -2,8 +2,9 @@ package ss
 
 import (
 	"fmt"
-	"github.com/soderasen-au/go-common/util"
 	"os"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 const CMD_NAME_DEL_FILE = "del_file"

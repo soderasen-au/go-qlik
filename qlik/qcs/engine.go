@@ -7,9 +7,11 @@ import (
 	"path"
 
 	"github.com/qlik-oss/enigma-go/v4"
+
 	"github.com/soderasen-au/go-qlik/qlik/rac"
 
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 )
 

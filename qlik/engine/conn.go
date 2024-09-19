@@ -5,14 +5,17 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/soderasen-au/go-common/util"
-	"github.com/soderasen-au/go-qlik/qlik/rac"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
 
+	"github.com/soderasen-au/go-common/util"
+
+	"github.com/soderasen-au/go-qlik/qlik/rac"
+
 	"github.com/qlik-oss/enigma-go/v4"
+
 	"github.com/soderasen-au/go-qlik/qlik"
 )
 

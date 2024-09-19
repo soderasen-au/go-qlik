@@ -5,6 +5,7 @@ import (
 
 	"github.com/soderasen-au/go-common/crypto"
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/qlik"
 )
 

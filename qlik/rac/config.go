@@ -2,8 +2,9 @@ package rac
 
 import (
 	"crypto/tls"
-	"github.com/soderasen-au/go-common/util"
 	"net/http"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 type ExtraTLSConfig struct {

@@ -1,16 +1,7 @@
-engine_uri: wss://localhost:4747/app
-qrs_base_uri: https://localhost:4242/qrs
-hub_uri:
-  host: soderasen-au.com
-  port: 443
-  prefix: "/jwt/"
-  isSecure: true
-auth_mode: cert
+engine_uri: wss://remote.qlik-ci.com:4747/app
 server_type: on_prem
-user_id: qliksa
-user_directory: sa-minipc
+auth_mode: cert
 certs:
-  client: \\sa-minipc\certs\soderasen-au.com\qlik\client.pem
-  client_key: \\sa-minipc\certs\soderasen-au.com\qlik\client_key.pem
-  root_ca: \\sa-minipc\certs\soderasen-au.com\qlik\root.pem
-random_proxy_session: true
+  client: ../../test/certs/qlik-ci/client.pem
+  client_key: ../../test/certs/qlik-ci/client_key.pem
+  root_ca: ../../test/certs/qlik-ci/root.pem

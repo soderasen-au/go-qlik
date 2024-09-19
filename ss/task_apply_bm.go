@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 )
 

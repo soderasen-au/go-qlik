@@ -1,12 +1,14 @@
 package qrs
 
 import (
+	"net/url"
+	"strings"
+
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/qlik"
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"github.com/soderasen-au/go-qlik/qlik/rac"
-	"net/url"
-	"strings"
 )
 
 type Config struct {

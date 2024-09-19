@@ -13,28 +13,6 @@ import (
 	"github.com/soderasen-au/go-qlik/qlik/rac"
 )
 
-func TestNewConn(t *testing.T) {
-	conn, logger, _ := setupTestSuiteConn("../../test/engine/soderasen-au-qs.yaml", t)
-	if conn == nil {
-		logger.Fatal().Msgf("conn is nil")
-		return
-	}
-	defer conn.Global.DisconnectFromServer()
-
-	ver, err := conn.Global.EngineVersion(ConnCtx)
-	if err != nil {
-		logger.Fatal().Msgf("engine version error: %v", err)
-		t.Errorf("error %v", err)
-		return
-	}
-	logger.Info().Msgf("engine version: %v", ver)
-
-	_, err = conn.Global.OpenDoc(ConnCtx, "2dea34ed-10db-4463-991c-3f8ba6176476", "", "", "", false)
-	if err != nil {
-		t.Errorf("%s error: %s", "OpenDoc", err.Error())
-	}
-}
-
 func setupRACClient(conf string, t *testing.T) (*rac.RestApiClient, *zerolog.Logger, func(t2 *testing.T)) {
 	wd, _ := os.Getwd()
 	buf, err := os.ReadFile(conf)

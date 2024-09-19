@@ -61,7 +61,12 @@ func (c *Client) GetAppContent(downloadPath string) (data []byte, res *util.Resu
 		return nil, util.Error("ParseRequestURI", err)
 	}
 	q := uri.Query()
-	fileData, res := c.Get(rac.GetRootPath(uri.Path), rac.WithParam("serverNodeId", q["serverNodeId"][0]))
+	var opts []rac.RequestOption
+	if nodeIds, ok := q["serverNodeId"]; ok {
+		opts = make([]rac.RequestOption, 0)
+		opts = append(opts, rac.WithParam("serverNodeId", nodeIds[0]))
+	}
+	fileData, res := c.Get(rac.GetRootPath(uri.Path), opts...)
 	if res != nil {
 		return nil, res.With("Get")
 	}

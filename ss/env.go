@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/soderasen-au/go-common/loggers"
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"github.com/soderasen-au/go-qlik/qlik/managed/qrs"
 )

@@ -2,8 +2,9 @@ package qlik
 
 import (
 	"fmt"
-	"github.com/soderasen-au/go-common/util"
 	"testing"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 func TestParseUser(t *testing.T) {

@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/soderasen-au/go-common/util"
 )

@@ -1,10 +1,12 @@
 package report
 
 import (
+	"os"
+
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"github.com/soderasen-au/go-qlik/qlik/managed/qrs"
-	"os"
 )
 
 type SenseReportPrinter struct {

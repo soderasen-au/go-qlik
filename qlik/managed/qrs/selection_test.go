@@ -2,9 +2,10 @@ package qrs
 
 import (
 	"encoding/json"
-	"github.com/soderasen-au/go-common/util"
 	"testing"
 	"time"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 func TestClient_SelectApp(t *testing.T) {

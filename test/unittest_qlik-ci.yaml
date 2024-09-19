@@ -1,0 +1,46 @@
+sense:
+  engine:
+    engine_uri: wss://remote.qlik-ci.com:4747/app
+    server_type: on_prem
+    auth_mode: cert
+    certs:
+      client: ../../test/certs/qlik-ci/client.pem
+      client_key: ../../test/certs/qlik-ci/client_key.pem
+      root_ca: ../../test/certs/qlik-ci/root.pem
+  qrs:
+    base_url: https://remote.qlik-ci.com:4242
+    is_cloud: false
+    virtual_proxy: /
+    api_prefix: qrs
+    auth:
+      method: cert
+      user:
+        userId: qsadmin
+        userDirectory: qlik-ci
+      certs:
+        client: ../../test/certs/qlik-ci/client.pem
+        client_key: ../../test/certs/qlik-ci/client_key.pem
+        root_ca: ../../test/certs/qlik-ci/root.pem
+    extra_tls_config:
+      insecure_skip_verify: true
+    timeout_sec: 300
+  qps:
+    base_url: https://remote.qlik-ci.com:4243
+    is_cloud: false
+    virtual_proxy: /
+    api_prefix: qps
+    auth:
+      method: cert
+      user:
+        userId: qsadmin
+        userDirectory: qlik-ci
+      certs:
+        client: ../../test/certs/qlik-ci/client.pem
+        client_key: ../../test/certs/qlik-ci/client_key.pem
+        root_ca: ../../test/certs/qlik-ci/root.pem
+    extra_tls_config:
+      insecure_skip_verify: true
+    timeout_sec: 300
+  hub:
+    base_uri: https://qlik.qlik-ci.com/hub
+    auth_mode: ticket

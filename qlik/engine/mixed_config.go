@@ -2,6 +2,7 @@ package engine
 
 import (
 	"github.com/soderasen-au/go-common/util"
+
 	"github.com/soderasen-au/go-qlik/qlik/rac"
 )
 

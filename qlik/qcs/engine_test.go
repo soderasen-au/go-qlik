@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"gopkg.in/yaml.v3"
+
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"github.com/soderasen-au/go-qlik/qlik/rac"
-	"gopkg.in/yaml.v3"
 )
 
 func setupTestSuite(conf string, t *testing.T) (*Client, *zerolog.Logger, func(t2 *testing.T)) {

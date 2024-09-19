@@ -21,4 +21,4 @@ auth:
 extra_tls_config:
   InsecureSkipVerify: true
 timeout_sec: 300
-log_file_name: "test_psdemo.log"
+log_file_name: "../../test/test_psdemo.log"

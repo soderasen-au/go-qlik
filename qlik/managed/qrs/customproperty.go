@@ -3,8 +3,9 @@ package qrs
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/soderasen-au/go-qlik/qlik/rac"
 	"time"
+
+	"github.com/soderasen-au/go-qlik/qlik/rac"
 
 	"github.com/soderasen-au/go-common/util"
 )

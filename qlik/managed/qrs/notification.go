@@ -3,13 +3,15 @@ package qrs
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/rs/zerolog"
-	"github.com/soderasen-au/go-common/loggers"
-	"github.com/soderasen-au/go-common/util"
-	"github.com/soderasen-au/go-qlik/qlik/rac"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/soderasen-au/go-common/loggers"
+	"github.com/soderasen-au/go-common/util"
+
+	"github.com/soderasen-au/go-qlik/qlik/rac"
 )
 
 type Subscription struct {

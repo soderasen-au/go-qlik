@@ -3,12 +3,14 @@ package qrs
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/google/uuid"
-	"github.com/soderasen-au/go-common/util"
-	"github.com/soderasen-au/go-qlik/qlik/rac"
 	"mime/multipart"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/soderasen-au/go-common/util"
+
+	"github.com/soderasen-au/go-qlik/qlik/rac"
 )
 
 type Extension struct {

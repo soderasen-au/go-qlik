@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/soderasen-au/go-common/crypto"
 	"github.com/soderasen-au/go-common/loggers"
+
 	"github.com/soderasen-au/go-qlik/qlik"
 )
 

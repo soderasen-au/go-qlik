@@ -9,6 +9,7 @@ import (
 
 	"github.com/eventials/go-tus"
 	"github.com/rs/zerolog"
+
 	"github.com/soderasen-au/go-qlik/qlik"
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"github.com/soderasen-au/go-qlik/qlik/rac"

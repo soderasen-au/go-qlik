@@ -2,8 +2,9 @@ package qlik
 
 import (
 	"fmt"
-	"github.com/soderasen-au/go-common/util"
 	"strings"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 type User struct {
