@@ -20,10 +20,12 @@ type (
 		SheetBlackList  []string `json:"sheet_black_list,omitempty" yaml:"sheet_black_list"`
 		ObjectBlackList []string `json:"object_black_list,omitempty" yaml:"object_black_list"`
 		ObjectWhiteList []string `json:"object_white_list,omitempty" yaml:"object_white_list"`
+		SheetWhiteList  []string `json:"sheet_white_list,omitempty" yaml:"sheet_white_list"`
 
 		sheetBlackMap  map[string]bool
 		objectBlackMap map[string]bool
 		objectWhiteMap map[string]bool
+		sheetWhiteMap  map[string]bool
 	}
 
 	WalkOptions struct {
@@ -98,10 +100,17 @@ func (f *FilterOptions) BuildMap() {
 			f.objectWhiteMap[object] = true
 		}
 	}
+
+	if f.SheetWhiteList != nil {
+		f.sheetWhiteMap = make(map[string]bool)
+		for _, sheet := range f.SheetWhiteList {
+			f.sheetWhiteMap[sheet] = true
+		}
+	}
 }
 
 func (f *FilterOptions) IsSheetBlackListed(sheet string) bool {
-	if f.sheetBlackMap == nil {
+	if f.SheetBlackList == nil || f.sheetBlackMap == nil {
 		return false
 	}
 	_, ok := f.sheetBlackMap[sheet]
@@ -109,7 +118,7 @@ func (f *FilterOptions) IsSheetBlackListed(sheet string) bool {
 }
 
 func (f *FilterOptions) IsObjectBlackListed(object string) bool {
-	if f.objectBlackMap == nil {
+	if f.ObjectBlackList == nil || f.objectBlackMap == nil {
 		return false
 	}
 	_, ok := f.objectBlackMap[object]
@@ -117,10 +126,18 @@ func (f *FilterOptions) IsObjectBlackListed(object string) bool {
 }
 
 func (f *FilterOptions) IsObjectWhiteListed(object string) bool {
-	if f.objectWhiteMap == nil {
+	if f.ObjectWhiteList == nil || f.objectWhiteMap == nil {
 		return false
 	}
 	_, ok := f.objectWhiteMap[object]
+	return ok
+}
+
+func (f *FilterOptions) IsSheetWhiteListed(sheet string) bool {
+	if f.SheetWhiteList == nil || f.sheetWhiteMap == nil {
+		return false
+	}
+	_, ok := f.sheetWhiteMap[sheet]
 	return ok
 }
 
@@ -273,13 +290,6 @@ func WalkApp[T any](doc *enigma.Doc, cfg MixedConfig, opts *WalkOptions, walkers
 				ilog.Info().Msg("walking item ...")
 
 				if item.Info.Type == "sheet" {
-					if opts.Filter != nil && opts.Filter.SheetBlackList != nil {
-						ilog.Info().Msgf("Filtering sheet: %s", item.Info.Id)
-						if opts.Filter.IsSheetBlackListed(item.Info.Id) {
-							ilog.Info().Msgf(" - sheet: %s is black listed, ignore it", item.Info.Id)
-							continue
-						}
-					}
 					sheetObj, err := doc.GetObject(ConnCtx, item.Info.Id)
 					if err != nil {
 						ilog.Error().Msgf("GetSheetObject error: %s", err.Error())
@@ -409,12 +419,23 @@ func RecurWalkObject[T any](e ObjWalkEntry, walker ObjWalkFunc[T]) (*ObjWalkResu
 				return nil, nil
 			}
 		}
+
 		if e.Filter.ObjectWhiteList != nil {
-			logger.Info().Msgf("filtering with white list, object id: %s", qid)
+			logger.Info().Msgf("filtering with white-list, object id: %s", qid)
 			if !e.Filter.IsObjectWhiteListed(qid) {
-				logger.Info().Msgf(" - object is NOT white listed, ignore it")
-				return nil, nil
+				logger.Info().Msgf(" - object is NOT white-listed")
+				if !e.Filter.IsSheetWhiteListed(e.SheetId) {
+					logger.Info().Msgf("   - object's sheet is NOT white-listed either, ignore it.")
+					return nil, nil
+				} else {
+					logger.Info().Msgf("   - object's sheet is white-listed")
+				}
 			}
+		}
+
+		if e.Filter.IsSheetBlackListed(e.SheetId) {
+			logger.Info().Msgf(" - sheet: %s is black listed, ignore it", e.SheetId)
+			return nil, nil
 		}
 	}
 
@@ -492,7 +513,7 @@ func RecurWalkObject[T any](e ObjWalkEntry, walker ObjWalkFunc[T]) (*ObjWalkResu
 				Logger:    &clog,
 			}
 			clog.Trace().Msg("start")
-			childObjShot, res := RecurWalkObject(entry, walker)
+			childObjShot, res := RecurWalkObject[T](entry, walker)
 			clog.Trace().Msg("end")
 
 			mutex.Lock()
@@ -530,6 +551,34 @@ func RecurWalkObjectSync[T any](e ObjWalkEntry, walker ObjWalkFunc[T]) (*ObjWalk
 		Str("func", "RecursiveGetSnapshots").
 		Str("entry", fmt.Sprintf("%s/%s", qtype, qid)).
 		Logger()
+
+	if e.Filter != nil && strings.ToLower(qtype) != "sheet" {
+		if e.Filter.ObjectBlackList != nil {
+			logger.Info().Msgf("filtering with black list, object id: %s", qid)
+			if e.Filter.IsObjectBlackListed(qid) {
+				logger.Info().Msgf(" - object is black listed, ignore it")
+				return nil, nil
+			}
+		}
+
+		if e.Filter.ObjectWhiteList != nil {
+			logger.Info().Msgf("filtering with white-list, object id: %s", qid)
+			if !e.Filter.IsObjectWhiteListed(qid) {
+				logger.Info().Msgf(" - object is NOT white-listed")
+				if !e.Filter.IsSheetWhiteListed(e.SheetId) {
+					logger.Info().Msgf("   - object's sheet is NOT white-listed either, ignore it.")
+					return nil, nil
+				} else {
+					logger.Info().Msgf("   - object's sheet is white-listed")
+				}
+			}
+		}
+
+		if e.Filter.IsSheetBlackListed(e.SheetId) {
+			logger.Info().Msgf(" - sheet: %s is black listed, ignore it", e.SheetId)
+			return nil, nil
+		}
+	}
 
 	emptyObjShot := ObjWalkResult[T]{
 		Info:         e.Info,
@@ -590,7 +639,7 @@ func RecurWalkObjectSync[T any](e ObjWalkEntry, walker ObjWalkFunc[T]) (*ObjWalk
 			Logger:    e.Logger,
 		}
 		logger.Trace().Msgf("child[%d]: %s/%s start", i, child.Type, child.Id)
-		childObjShot, res := RecurWalkObjectSync(entry, walker)
+		childObjShot, res := RecurWalkObjectSync[T](entry, walker)
 		logger.Trace().Msgf("child[%d]: %s/%s finished", i, child.Type, child.Id)
 		if res != nil {
 			return nil, res.With(fmt.Sprintf("walker[%s/%s]", e.Info.Type, e.Info.Id))
