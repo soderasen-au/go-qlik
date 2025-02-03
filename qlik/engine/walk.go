@@ -437,6 +437,14 @@ func RecurWalkObject[T any](e ObjWalkEntry, walker ObjWalkFunc[T]) (*ObjWalkResu
 			logger.Info().Msgf(" - sheet: %s is black listed, ignore it", e.SheetId)
 			return nil, nil
 		}
+
+		if e.Filter.SheetWhiteList != nil {
+			logger.Info().Msgf("filtering with white-list, sheet: %s", e.SheetId)
+			if !e.Filter.IsSheetWhiteListed(e.SheetId) {
+				logger.Info().Msgf("   - object's sheet is NOT white-listed")
+				return nil, nil
+			}
+		}
 	}
 
 	emptyObjShot := ObjWalkResult[T]{

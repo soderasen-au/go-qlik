@@ -227,6 +227,9 @@ func HyperCubeDiff(path string, from, to *enigma.HyperCube) (*util.Diff, *util.R
 	}
 
 	d.Diff = builder.String()
+	if d.Diff == "" {
+		return nil, nil
+	}
 	return &d, nil
 }
 
