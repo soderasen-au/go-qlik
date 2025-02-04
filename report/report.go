@@ -25,6 +25,8 @@ const (
 
 	DRIVER_SENSE    string = "sense"
 	DRIVER_BUILT_IN string = "built_in"
+
+	COL_TYPE string = "static"
 )
 
 func (f ReportFormat) IsExcel() bool {
@@ -71,12 +73,14 @@ type CustomHeader struct {
 }
 
 type ColumnHeaderFormat struct {
-	Order   int    `json:"order"`
-	Label   string `json:"label"`
-	FgColor string `json:"fg_color"`
-	BgColor string `json:"bg_color"`
-	NumFmt  string `json:"num_fmt"`
-	DateFmt string `json:"date_fmt"`
+	Order       int    `json:"order"`
+	Label       string `json:"label"`
+	FgColor     string `json:"fg_color"`
+	BgColor     string `json:"bg_color"`
+	NumFmt      string `json:"num_fmt"`
+	DateFmt     string `json:"date_fmt"`
+	ColumnType  string `json:"column_type,omitempty"`
+	StaticValue string `json:"static_value"`
 }
 
 // user has to apply any needed selection before printing report
