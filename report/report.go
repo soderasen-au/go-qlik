@@ -26,7 +26,7 @@ const (
 	DRIVER_SENSE    string = "sense"
 	DRIVER_BUILT_IN string = "built_in"
 
-	COL_TYPE string = "static"
+	StaticColumnType string = "static"
 )
 
 func (f ReportFormat) IsExcel() bool {
