@@ -201,11 +201,15 @@ func (f ColumnHeaderFormat) GetHeaderCellStyle(colInfo *engine.ColumnInfo, cellL
 
 	if f.DateFmt != "" {
 		cellLogger.Debug().Msgf("num fmt: %s", f.DateFmt)
-		colInfo.NumFormat.Fmt = f.DateFmt
+		if colInfo != nil && f.ColumnType != StaticColumnType {
+			colInfo.NumFormat.Fmt = f.DateFmt
+		}
 		excelStyle.CustomNumFmt = &f.DateFmt
 	} else if f.NumFmt != "" {
 		cellLogger.Debug().Msgf("num fmt: %s", f.NumFmt)
-		colInfo.NumFormat.Fmt = f.NumFmt
+		if colInfo != nil && f.ColumnType != StaticColumnType {
+			colInfo.NumFormat.Fmt = f.NumFmt
+		}
 		excelStyle.CustomNumFmt = &f.NumFmt
 	}
 	cellLogger.Debug().Msgf("excel custom num fmt: %s", util.MaybeNil(excelStyle.CustomNumFmt))

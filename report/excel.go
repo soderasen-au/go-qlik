@@ -374,53 +374,9 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 			return nil, nil, util.Error("CoordinatesToCellName", err)
 		}
 
-		var cellStyle *excelize.Style
-		if r.ColumnHeaderFormats != nil {
-			if colHeaderFmt, ok := r.ColumnHeaderFormats[cellText]; ok {
-				if colHeaderFmt.Label != "" {
-					cellText = colHeaderFmt.Label
-				}
-				cs, res := colHeaderFmt.GetHeaderCellStyle(colInfo, &cellLogger)
-				if res != nil {
-					return nil, nil, res.With("GetHeaderCellStyle")
-				}
-				cellStyle = cs
-			} else {
-				logger.Warn().Msgf("can not find report column format for cube column: `%s`", cellText)
-			}
-		}
-
-		cellLogger.Debug().Msgf("print cell[%d]: %s", ColCnt, cellText)
-		excel.SetCellStr(sheet, cellName, cellText)
-		if cellStyle != nil {
-			cellStyleIx, err := excel.NewStyle(cellStyle)
-			if err != nil {
-				cellLogger.Err(err).Msg("NewStyle")
-				return nil, nil, util.Error("NewStyle", err)
-			}
-			err = excel.SetCellStyle(sheet, cellName, cellName, cellStyleIx)
-			if err != nil {
-				cellLogger.Err(err).Msg("SetCellStyle")
-				return nil, nil, util.Error("SetCellStyle", err)
-			}
-		}
-
-		colName, _, err := excelize.SplitCellName(cellName)
-		if err != nil {
-			cellLogger.Err(err).Msg("SplitCellName")
-			return nil, nil, util.Error("SplitCellName", err)
-		}
-		w, err := excel.GetColWidth(sheet, colName)
-		if err != nil {
-			cellLogger.Err(err).Msg("GetColWidth")
-			return nil, nil, util.Error("GetColWidth", err)
-		}
-		if w < float64(colInfo.ApprMaxGlyphCount) && colInfo.ApprMaxGlyphCount < 64 {
-			err = excel.SetColWidth(sheet, colName, colName, float64(colInfo.ApprMaxGlyphCount))
-			if err != nil {
-				cellLogger.Err(err).Msg("SetColWidth")
-				return nil, nil, util.Error("SetColWidth", err)
-			}
+		res := p.printObjectHeaderCell(r, excel, sheet, cellName, cellText, colInfo, cellLogger)
+		if res != nil {
+			return nil, nil, res.With("printObjectHeaderCell")
 		}
 
 		if printTotals && expIx >= 0 {
@@ -451,6 +407,27 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 	if ColCnt != layout.HyperCube.Size.Cx && layout.HyperCube.Mode == "S" {
 		logger.Warn().Msgf("Col(%d) != hypercube.x(%d)", ColCnt, layout.HyperCube.Size.Cx)
 	}
+
+	if r.ColumnHeaderFormats != nil {
+		for _, colHeaderFmt := range r.ColumnHeaderFormats {
+			if colHeaderFmt.ColumnType == StaticColumnType {
+				repIdx := colHeaderFmt.Order
+				cellName, err := excelize.CoordinatesToCellName(c0+repIdx, r0)
+				cellLogger := logger.With().Str("coor", fmt.Sprintf("(%d, %d)", r0, c0+repIdx)).Str("name", cellName).Logger()
+				if err != nil {
+					cellLogger.Err(err).Msg("CoordinatesToCellName")
+					return nil, nil, util.Error("CoordinatesToCellName", err)
+				}
+
+				res := p.printObjectHeaderCell(r, excel, sheet, cellName, colHeaderFmt.Label, nil, cellLogger)
+				if res != nil {
+					return nil, nil, res.With("printObjectHeaderCell")
+				}
+				ColCnt++
+			}
+		}
+	}
+
 	resRect.Width = ColCnt
 	resRect.Height++
 	if printTotals {
@@ -458,6 +435,61 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 	}
 
 	return &resRect, cube2report, nil
+}
+
+func (p *ExcelReportPrinter) printObjectHeaderCell(r Report, excel *excelize.File, sheet string, cellName string, cellText string, colInfo *engine.ColumnInfo, cellLogger zerolog.Logger) *util.Result {
+	var cellStyle *excelize.Style
+	if r.ColumnHeaderFormats != nil {
+		if colHeaderFmt, ok := r.ColumnHeaderFormats[cellText]; ok {
+			if colHeaderFmt.Label != "" {
+				cellText = colHeaderFmt.Label
+			}
+			cs, res := colHeaderFmt.GetHeaderCellStyle(colInfo, &cellLogger)
+			if res != nil {
+				return res.With("GetHeaderCellStyle")
+			}
+			cellStyle = cs
+		} else {
+			cellLogger.Warn().Msgf("can not find report column format for cube column: `%s`", cellText)
+		}
+	}
+
+	cellLogger.Debug().Msgf("print cell[%s]: %s", cellName, cellText)
+	excel.SetCellStr(sheet, cellName, cellText)
+	if cellStyle != nil {
+		cellStyleIx, err := excel.NewStyle(cellStyle)
+		if err != nil {
+			cellLogger.Err(err).Msg("NewStyle")
+			return util.Error("NewStyle", err)
+		}
+		err = excel.SetCellStyle(sheet, cellName, cellName, cellStyleIx)
+		if err != nil {
+			cellLogger.Err(err).Msg("SetCellStyle")
+			return util.Error("SetCellStyle", err)
+		}
+	}
+
+	if colInfo != nil {
+		colName, _, err := excelize.SplitCellName(cellName)
+		if err != nil {
+			cellLogger.Err(err).Msg("SplitCellName")
+			return util.Error("SplitCellName", err)
+		}
+		w, err := excel.GetColWidth(sheet, colName)
+		if err != nil {
+			cellLogger.Err(err).Msg("GetColWidth")
+			return util.Error("GetColWidth", err)
+		}
+		if w < float64(colInfo.ApprMaxGlyphCount) && colInfo.ApprMaxGlyphCount < 64 {
+			err = excel.SetColWidth(sheet, colName, colName, float64(colInfo.ApprMaxGlyphCount))
+			if err != nil {
+				cellLogger.Err(err).Msg("SetColWidth")
+				return util.Error("SetColWidth", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (p *ExcelReportPrinter) printPivotObjectHeader(sheet string, layout *engine.ObjectLayoutEx, excel *excelize.File, rect enigma.Rect, _logger *zerolog.Logger) (*enigma.Rect, *util.Result) {
