@@ -912,6 +912,32 @@ func (p *ExcelReportPrinter) printStackObject(doc *enigma.Doc, r Report, objId, 
 	// 	logger.Err(errRes).Msg("ValidateDataCells")
 	// }
 
+	if r.ColumnHeaderFormats != nil {
+		r0 := resRect.Top + headerRect.Height
+		for _, colFormat := range r.ColumnHeaderFormats {
+			if colFormat.ColumnType == StaticColumnType {
+				colText := colFormat.StaticValue
+				reportColIx := resRect.Left + colFormat.Order
+				for ri := range sz.Cy {
+					reportRowIx := r0 + ri
+					cellName, err := excelize.CoordinatesToCellName(reportColIx, reportRowIx)
+					if err != nil {
+						logger.Err(err).Msg("CoordinatesToCellName")
+						return nil, util.Error("CoordinatesToCellName", err)
+					}
+					cellLogger := logger.With().
+						Str("coor", fmt.Sprintf("(%d, %d)", reportRowIx, reportColIx)).
+						Str("name", cellName).
+						Logger()
+
+					if cres := p.printObjectHeaderCell(r, excel, sheetName, cellName, colText, nil, cellLogger); cres != nil {
+						logger.Err(cres).Msg("printCell")
+						return nil, cres.With("printCell")
+					}
+				}
+			}
+		}
+	}
 	resRect.Height = sz.Cy
 	resRect.Width = sz.Cx
 	totalRows += resRect.Height
