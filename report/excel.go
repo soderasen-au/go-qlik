@@ -914,11 +914,12 @@ func (p *ExcelReportPrinter) printStackObject(doc *enigma.Doc, r Report, objId, 
 
 	if r.ColumnHeaderFormats != nil {
 		r0 := resRect.Top + headerRect.Height
+		dataHeight := sz.Cy - headerRect.Height
 		for _, colFormat := range r.ColumnHeaderFormats {
 			if colFormat.ColumnType == StaticColumnType {
 				colText := colFormat.StaticValue
 				reportColIx := resRect.Left + colFormat.Order
-				for ri := range sz.Cy {
+				for ri := range dataHeight {
 					reportRowIx := r0 + ri
 					cellName, err := excelize.CoordinatesToCellName(reportColIx, reportRowIx)
 					if err != nil {
