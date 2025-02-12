@@ -29,12 +29,13 @@ type (
 	}
 
 	WalkOptions struct {
-		Sync           bool           `json:"sync" yaml:"sync"`
-		MaxWorkers     int            `json:"max_workers" yaml:"max_workers"`
-		IgnoreError    bool           `json:"ignore_error" yaml:"ignore_error"`
-		OpendocRetries int            `json:"opendoc_retries" yaml:"opendoc_retries"`
-		RetryDelay     int            `json:"retry_delay" yaml:"retry_delay"`
-		Filter         *FilterOptions `json:"filter" yaml:"filter"`
+		Sync              bool           `json:"sync" yaml:"sync"`
+		MaxWorkers        int            `json:"max_workers" yaml:"max_workers"`
+		IgnoreError       bool           `json:"ignore_error" yaml:"ignore_error"`
+		SkipPrivateSheets bool           `json:"skip_private_sheets" yaml:"skip_private_sheets"`
+		OpendocRetries    int            `json:"opendoc_retries" yaml:"opendoc_retries"`
+		RetryDelay        int            `json:"retry_delay" yaml:"retry_delay"`
+		Filter            *FilterOptions `json:"filter" yaml:"filter"`
 	}
 
 	ObjWalkEntry struct {
@@ -143,12 +144,13 @@ func (f *FilterOptions) IsSheetWhiteListed(sheet string) bool {
 
 func DefaultWalkOptions() *WalkOptions {
 	return &WalkOptions{
-		Sync:           false,
-		MaxWorkers:     runtime.NumCPU(),
-		IgnoreError:    false,
-		OpendocRetries: 3,
-		RetryDelay:     30,
-		Filter:         &FilterOptions{},
+		Sync:              false,
+		MaxWorkers:        runtime.NumCPU(),
+		IgnoreError:       false,
+		SkipPrivateSheets: false,
+		OpendocRetries:    3,
+		RetryDelay:        30,
+		Filter:            &FilterOptions{},
 	}
 }
 
@@ -290,19 +292,23 @@ func WalkApp[T any](doc *enigma.Doc, cfg MixedConfig, opts *WalkOptions, walkers
 				ilog.Info().Msg("walking item ...")
 
 				if item.Info.Type == "sheet" {
+					if opts.SkipPrivateSheets && item.Meta != nil && !item.Meta.Published {
+						ilog.Warn().Msgf("skip private sheet: %s", item.Info.Id)
+						continue
+					}
 					sheetObj, err := doc.GetObject(ConnCtx, item.Info.Id)
 					if err != nil {
 						ilog.Error().Msgf("GetSheetObject error: %s", err.Error())
 						return nil, util.LogError(&logger, "GetSheetObject", err)
 					}
-					properties, err := sheetObj.GetPropertiesRaw(ConnCtx)
+					propertiesRaw, err := sheetObj.GetPropertiesRaw(ConnCtx)
 					if err != nil {
 						ilog.Error().Msgf("GetPropertiesRaw error: %s", err.Error())
 						return nil, util.LogError(&logger, "GetPropertiesRaw", err)
 					}
 					prop := ObjectPropeties{
 						Info:       item.Info,
-						Properties: properties,
+						Properties: propertiesRaw,
 					}
 					title, _ := GetTitle(nil, &prop, &ilog)
 					sheetId = item.Info.Id
