@@ -31,10 +31,11 @@ var TplFuncMap = TplFuncMapType{
 		return time.Now().Format(util.FromISO8601(params[0])) // Use custom format
 	},
 	"yesterday": func(params []string) string {
+		yesterday := time.Now().AddDate(0, 0, -1)
 		if len(params) == 0 {
-			return ""
+			return yesterday.Format("2006-01-02")
 		}
-		return strings.ToUpper(util.FromISO8601(params[0]))
+		return yesterday.Format(util.FromISO8601(params[0]))
 	},
 }
 
