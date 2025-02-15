@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/soderasen-au/go-common/util"
 )
 
 type (
@@ -26,13 +28,13 @@ var TplFuncMap = TplFuncMapType{
 		if len(params) == 0 {
 			return time.Now().Format("2006-01-02") // Default format
 		}
-		return time.Now().Format(params[0]) // Use custom format
+		return time.Now().Format(util.FromISO8601(params[0])) // Use custom format
 	},
 	"yesterday": func(params []string) string {
 		if len(params) == 0 {
 			return ""
 		}
-		return strings.ToUpper(params[0])
+		return strings.ToUpper(util.FromISO8601(params[0]))
 	},
 }
 
