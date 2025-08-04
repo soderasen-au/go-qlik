@@ -11,6 +11,7 @@ import (
 	"github.com/soderasen-au/go-qlik/qlik/rac"
 
 	"github.com/rs/zerolog/log"
+
 	"github.com/soderasen-au/go-common/util"
 
 	"github.com/soderasen-au/go-qlik/qlik/engine"
@@ -82,7 +83,13 @@ func (c *Client) Import(binPath, appId, appName, spaceId string, skipData bool) 
 	if len(spaceId) > 0 {
 		params["spaceId"] = spaceId
 	}
-	//params["mode"] = "autoreplace"
+	params["mode"] = "autoreplace"
+	if len(appId) > 0 {
+		params["appId"] = appId
+	}
+	if skipData {
+		params["NoData"] = "true"
+	}
 
 	_, buf, res := c.client.Do(http.MethodPost, "/apps/import", nil, rac.WithParams(params))
 	if res != nil {
