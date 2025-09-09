@@ -8,6 +8,8 @@ import (
 
 type MixedConfig struct {
 	AppId         string      `json:"app_id" yaml:"app_id" bson:"app_id"`
+	BmId          *string     `json:"bm_id" yaml:"bm_id" bson:"bm_id"`
+	BmTitle       *string     `json:"bm_title" yaml:"bm_title" bson:"bm_title"`
 	OnPrem        *Config     `json:"on_prem,omitempty" yaml:"on_prem,omitempty" bson:"on_prem,omitempty"`
 	OnPremCluster *Cluster    `json:"on_prem_cluster,omitempty" yaml:"on_prem_cluster,omitempty" bson:"on_prem_cluster,omitempty"`
 	QCS           *rac.Config `json:"qcs,omitempty" yaml:"qcs,omitempty" bson:"qcs,omitempty"`
