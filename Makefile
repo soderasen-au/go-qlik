@@ -1,4 +1,4 @@
-.PHONY: all build build-jwt build-pdfprinter test clean deps fmt vet lint help test-pdf compare-pdf
+.PHONY: all build build-jwt build-pdfprinter test clean deps deps-python fmt vet lint help test-pdf compare-pdf
 
 # Default target
 all: deps fmt vet build test
@@ -39,24 +39,31 @@ test-pdf: build-pdfprinter
 	@echo "Generating test reports..."
 	@mkdir -p test-reports
 	@echo "  - Generating Excel report..."
-	@./bin/pdfprinter -format xlsx -name "TestReport" -output-folder test-reports
+	@./bin/pdfprinter -format xlsx -name "TestReport" -output-folder test-reports -certs-path test/certs/sa-win2k25
 	@echo "  - Generating PDF report..."
-	@./bin/pdfprinter -format pdf -name "TestReport" -output-folder test-reports -orientation portrait
+	@./bin/pdfprinter -format pdf -name "TestReport" -output-folder test-reports -orientation portrait -certs-path test/certs/sa-win2k25
 	@echo "✓ Reports generated in test-reports/"
 	@ls -lh test-reports/TestReport.*
 
 # Compare generated reports with reference files
+# Requirements: python3, poppler (pdftotext)
+# Python packages: pip3 install openpyxl pandas odfpy
+# macOS: brew install poppler
 compare-pdf: test-pdf
 	@echo "Comparing generated reports with reference..."
-	@bash scripts/compare-reports.sh
+	@bash scripts/compare-reports.sh || (echo "❌ Comparison failed. Check error messages above." && exit 1)
 	@echo ""
 	@echo "Generating detailed analysis..."
-	@python3 scripts/extract-pdf-issues.py
+	@python3 scripts/extract-pdf-issues.py || echo "⚠️  Python analysis skipped"
 	@echo ""
 	@echo "📊 Comparison complete! View results:"
 	@echo "  📄 Text Report:  cat test-reports/comparison-report.txt"
-	@echo "  🌐 HTML Report:  open test-reports/comparison-report.html"
-	@echo "  📊 JSON Data:    test-reports/comparison-data.json"
+	@if [ -f test-reports/comparison-report.html ]; then \
+		echo "  🌐 HTML Report:  open test-reports/comparison-report.html"; \
+	fi
+	@if [ -f test-reports/comparison-data.json ]; then \
+		echo "  📊 JSON Data:    test-reports/comparison-data.json"; \
+	fi
 
 # Run tests with coverage
 test-coverage:
@@ -70,6 +77,12 @@ deps:
 	@echo "Downloading dependencies..."
 	@go mod download
 	@go mod tidy
+
+# Install Python dependencies for report comparison
+deps-python:
+	@echo "Installing Python dependencies for report comparison..."
+	@pip3 install -r scripts/requirements.txt
+	@echo "✓ Python dependencies installed"
 
 # Format Go code
 fmt:
@@ -122,9 +135,12 @@ help:
 	@echo "  test-qrs         - Run QRS package tests"
 	@echo "  test-report      - Run report package tests"
 	@echo "  test-pdf         - Generate test reports (1 xlsx, 1 pdf) using pdfprinter"
-	@echo "  compare-pdf      - Generate reports and compare with reference (creates detailed analysis)"
+	@echo "  compare-pdf      - Generate reports and compare with reference"
+	@echo "                     (requires: python3, poppler, pip3 install openpyxl pandas odfpy)"
+	@echo "                     macOS: brew install poppler"
 	@echo "  test-coverage    - Run tests with coverage report"
-	@echo "  deps             - Download and tidy dependencies"
+	@echo "  deps             - Download and tidy Go dependencies"
+	@echo "  deps-python      - Install Python dependencies for report comparison"
 	@echo "  fmt              - Format Go code"
 	@echo "  vet              - Run go vet"
 	@echo "  lint             - Run golint (if installed)"

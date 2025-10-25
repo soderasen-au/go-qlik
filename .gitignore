@@ -28,5 +28,9 @@ pdfprinter
 jwt
 test/pdf/pdfprinter
 cmd/jwt/jwt
+*.log
+
+# IDE files
+.idea/
 
 CLAUDE.md

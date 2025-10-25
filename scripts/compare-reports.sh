@@ -22,12 +22,73 @@ GENERATED_PDF="${GENERATED_PDF:-test-reports/TestReport.pdf}"
 OUTPUT_DIR="${OUTPUT_DIR:-test-reports}"
 TEMP_DIR="$OUTPUT_DIR/.tmp"
 
+# Detect OS
+OS_TYPE="$(uname -s)"
+
+# Check for required tools
+check_dependencies() {
+    local missing_deps=()
+    local missing_python_packages=()
+
+    # Check Python3
+    if ! command -v python3 &> /dev/null; then
+        missing_deps+=("python3")
+    else
+        # Check Python packages
+        if ! python3 -c "import openpyxl" &> /dev/null; then
+            missing_python_packages+=("openpyxl")
+        fi
+        if ! python3 -c "import pandas" &> /dev/null; then
+            missing_python_packages+=("pandas")
+        fi
+        if ! python3 -c "import odf" &> /dev/null; then
+            missing_python_packages+=("odfpy")
+        fi
+    fi
+
+    # Check pdftotext
+    if ! command -v pdftotext &> /dev/null; then
+        if [[ "$OS_TYPE" == "Darwin"* ]]; then
+            missing_deps+=("pdftotext (install via: brew install poppler)")
+        else
+            missing_deps+=("pdftotext (install via: apt-get install poppler-utils)")
+        fi
+    fi
+
+    # Report missing dependencies
+    local has_errors=0
+
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        echo -e "${RED}Error: Missing required system dependencies:${NC}"
+        for dep in "${missing_deps[@]}"; do
+            echo -e "  - $dep"
+        done
+        echo ""
+        has_errors=1
+    fi
+
+    if [[ ${#missing_python_packages[@]} -gt 0 ]]; then
+        echo -e "${RED}Error: Missing required Python packages:${NC}"
+        echo -e "  Run: ${YELLOW}pip3 install ${missing_python_packages[*]}${NC}"
+        echo ""
+        has_errors=1
+    fi
+
+    if [[ $has_errors -eq 1 ]]; then
+        echo -e "${YELLOW}Please install the missing dependencies and try again.${NC}"
+        exit 1
+    fi
+}
+
 # Ensure output directory exists
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$TEMP_DIR"
 
 echo -e "${BLUE}=== Report Comparison Tool ===${NC}"
 echo ""
+
+# Check dependencies
+check_dependencies
 
 # Check if files exist
 if [[ ! -f "$REFERENCE_ODS" ]]; then
@@ -54,15 +115,20 @@ echo ""
 # Convert files to CSV for comparison
 echo -e "${BLUE}Converting files to CSV...${NC}"
 
+# Get script directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # Convert reference ODS to CSV
-libreoffice --headless --convert-to csv:"Text - txt - csv (StarCalc)":59,34,76,1 \
-    --outdir "$TEMP_DIR" "$REFERENCE_ODS" 2>&1 | grep -v "^convert" || true
-mv "$TEMP_DIR/TestReport.csv" "$TEMP_DIR/reference.csv" 2>/dev/null || true
+if ! python3 "$SCRIPT_DIR/convert-to-csv.py" "$REFERENCE_ODS" "$TEMP_DIR/reference.csv"; then
+    echo -e "${RED}Failed to convert reference ODS file${NC}"
+    exit 1
+fi
 
 # Convert generated XLSX to CSV
-libreoffice --headless --convert-to csv:"Text - txt - csv (StarCalc)":59,34,76,1 \
-    --outdir "$TEMP_DIR" "$GENERATED_XLSX" 2>&1 | grep -v "^convert" || true
-mv "$TEMP_DIR/TestReport.csv" "$TEMP_DIR/generated.csv" 2>/dev/null || true
+if ! python3 "$SCRIPT_DIR/convert-to-csv.py" "$GENERATED_XLSX" "$TEMP_DIR/generated.csv"; then
+    echo -e "${RED}Failed to convert generated XLSX file${NC}"
+    exit 1
+fi
 
 # Extract text from PDF
 pdftotext "$GENERATED_PDF" "$TEMP_DIR/pdf_text.txt" 2>/dev/null || {

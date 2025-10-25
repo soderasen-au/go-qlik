@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"path/filepath"
 
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/soderasen-au/go-common/crypto"
@@ -20,6 +21,7 @@ var (
 	orientation  = flag.String("orientation", "portrait", "PDF orientation: portrait, landscape (only for PDF format)")
 	name         = flag.String("name", "TestPdfStackObject", "Report name")
 	outputFolder = flag.String("output-folder", ".", "Output folder path")
+	certsPath    = flag.String("certs-path", "../certs/sa-win2k25", "Path to certificates directory")
 	help         = flag.Bool("h", false, "Show help message")
 )
 
@@ -48,8 +50,10 @@ func init() {
 		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -output-folder \"/tmp/reports\"\n\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  # Custom name and output folder\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -name \"Q4Report\" -output-folder \"./output\"\n\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  # Specify custom certificates path\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -certs-path \"/home/sa/certs/sa-win2k25\"\n\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  # Combine all parameters\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -app-id \"your-app-id\" -bm-id \"your-bookmark-id\" -format pdf -orientation landscape -name \"MyReport\" -output-folder \"./reports\"\n\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -app-id \"your-app-id\" -bm-id \"your-bookmark-id\" -format pdf -orientation landscape -name \"MyReport\" -output-folder \"./reports\" -certs-path \"/path/to/certs\"\n\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  # Note: orientation is ignored for non-PDF formats\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -format xlsx -orientation landscape  # orientation has no effect\n")
 	}
@@ -64,9 +68,9 @@ func getDoc() (*enigma.Doc, *util.Result) {
 		AuthMode:      engine.AUTH_MODE_CERT,
 		ServerType:    engine.ST_ON_PREM,
 		Certs: crypto.Certificates{
-			ClientFile:    "/home/sa/certs/sa-win2k25/client.pem",
-			ClientkeyFile: "/home/sa/certs/sa-win2k25/client_key.pem",
-			CAFile:        "/home/sa/certs/sa-win2k25/root.pem",
+			ClientFile:    filepath.Join(*certsPath, "client.pem"),
+			ClientkeyFile: filepath.Join(*certsPath, "client_key.pem"),
+			CAFile:        filepath.Join(*certsPath, "root.pem"),
 		},
 	}
 	res := cfg.QCSEngineURIAppendAppID(*appID)
@@ -118,8 +122,8 @@ func main() {
 		Target:    report.TARGET_OBJECTS,
 		TargetIDs: []string{"KnASd"},
 		Headers: []report.CustomHeader{
-			{Label: "label1", Text: "Test"},
-			{Label: "label2", Text: "Test"},
+			{Label: "", Text: "Test"},
+			{Label: "", Text: "Test"},
 		},
 		OutputCurrentSelection: true,
 		OutputFormat:           util.Ptr(report.ReportFormat(*format)),
