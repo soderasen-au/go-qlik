@@ -122,8 +122,8 @@ func main() {
 		Target:    report.TARGET_OBJECTS,
 		TargetIDs: []string{"KnASd"},
 		Headers: []report.CustomHeader{
-			{Label: "", Text: "Test"},
-			{Label: "", Text: "Test"},
+			{Label: "label1", Text: "Text1"},
+			{Label: "label2", Text: "Text2"},
 		},
 		OutputCurrentSelection: true,
 		OutputFormat:           util.Ptr(report.ReportFormat(*format)),

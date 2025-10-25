@@ -1,5 +1,8 @@
 .PHONY: all build build-jwt build-pdfprinter test clean deps deps-python fmt vet lint help test-pdf compare-pdf
 
+# Python interpreter (use virtual environment if available)
+PYTHON := $(shell if [ -f .venv/bin/python3 ]; then echo .venv/bin/python3; else echo python3; fi)
+
 # Default target
 all: deps fmt vet build test
 
@@ -46,15 +49,16 @@ test-pdf: build-pdfprinter
 	@ls -lh test-reports/TestReport.*
 
 # Compare generated reports with reference files
-# Requirements: python3, poppler (pdftotext)
-# Python packages: pip3 install openpyxl pandas odfpy
+# Requirements: python3, poppler (pdftotext), uv
+# Python packages: uv pip install -r scripts/requirements.txt
+# Install uv: pip install uv
 # macOS: brew install poppler
-compare-pdf: test-pdf
+compare-pdf: test-pdf deps-python
 	@echo "Comparing generated reports with reference..."
-	@bash scripts/compare-reports.sh || (echo "❌ Comparison failed. Check error messages above." && exit 1)
+	@PYTHON=$(PYTHON) bash scripts/compare-reports.sh || (echo "❌ Comparison failed. Check error messages above." && exit 1)
 	@echo ""
 	@echo "Generating detailed analysis..."
-	@python3 scripts/extract-pdf-issues.py || echo "⚠️  Python analysis skipped"
+	@$(PYTHON) scripts/extract-pdf-issues.py || echo "⚠️  Python analysis skipped"
 	@echo ""
 	@echo "📊 Comparison complete! View results:"
 	@echo "  📄 Text Report:  cat test-reports/comparison-report.txt"
@@ -81,7 +85,11 @@ deps:
 # Install Python dependencies for report comparison
 deps-python:
 	@echo "Installing Python dependencies for report comparison..."
-	@pip3 install -r scripts/requirements.txt
+	@if [ ! -d .venv ]; then \
+		echo "Creating virtual environment..."; \
+		uv venv; \
+	fi
+	@uv pip install -r scripts/requirements.txt
 	@echo "✓ Python dependencies installed"
 
 # Format Go code
@@ -112,7 +120,7 @@ clean:
 	@rm -f pdfprinter jwt
 	@rm -f coverage.out coverage.html
 	@rm -f test/pdf/pdfprinter
-	@rm -f test/pdf/*.pdf test/pdf/*.xlsx test/pdf/*.csv test/pdf/*.tsv
+	@rm -f test/pdf/*.pdf test/pdf/*.csv test/pdf/*.tsv
 	@rm -f cmd/jwt/jwt
 	@find . -name "*.log" -type f -delete
 	@echo "Clean complete"
@@ -136,8 +144,8 @@ help:
 	@echo "  test-report      - Run report package tests"
 	@echo "  test-pdf         - Generate test reports (1 xlsx, 1 pdf) using pdfprinter"
 	@echo "  compare-pdf      - Generate reports and compare with reference"
-	@echo "                     (requires: python3, poppler, pip3 install openpyxl pandas odfpy)"
-	@echo "                     macOS: brew install poppler"
+	@echo "                     (requires: python3, poppler, uv)"
+	@echo "                     Install: pip install uv, brew install poppler (macOS)"
 	@echo "  test-coverage    - Run tests with coverage report"
 	@echo "  deps             - Download and tidy Go dependencies"
 	@echo "  deps-python      - Install Python dependencies for report comparison"

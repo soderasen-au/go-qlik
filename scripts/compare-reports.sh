@@ -2,7 +2,7 @@
 #
 # compare-reports.sh - Compare generated reports with reference files
 #
-# This script compares PDF and Excel outputs against reference ODS file,
+# This script compares PDF and Excel outputs against reference XLSX file,
 # identifies differences, and generates a detailed comparison report.
 #
 
@@ -16,7 +16,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-REFERENCE_ODS="${REFERENCE_ODS:-test/pdf/TestReport.ods}"
+PYTHON="${PYTHON:-python3}"  # Use environment variable or default to python3
+REFERENCE_XLSX="${REFERENCE_XLSX:-test/pdf/TestReport.xlsx}"
 GENERATED_XLSX="${GENERATED_XLSX:-test-reports/TestReport.xlsx}"
 GENERATED_PDF="${GENERATED_PDF:-test-reports/TestReport.pdf}"
 OUTPUT_DIR="${OUTPUT_DIR:-test-reports}"
@@ -31,17 +32,17 @@ check_dependencies() {
     local missing_python_packages=()
 
     # Check Python3
-    if ! command -v python3 &> /dev/null; then
-        missing_deps+=("python3")
+    if ! command -v "$PYTHON" &> /dev/null; then
+        missing_deps+=("python ($PYTHON)")
     else
         # Check Python packages
-        if ! python3 -c "import openpyxl" &> /dev/null; then
+        if ! "$PYTHON" -c "import openpyxl" &> /dev/null; then
             missing_python_packages+=("openpyxl")
         fi
-        if ! python3 -c "import pandas" &> /dev/null; then
+        if ! "$PYTHON" -c "import pandas" &> /dev/null; then
             missing_python_packages+=("pandas")
         fi
-        if ! python3 -c "import odf" &> /dev/null; then
+        if ! "$PYTHON" -c "import odf" &> /dev/null; then
             missing_python_packages+=("odfpy")
         fi
     fi
@@ -69,7 +70,7 @@ check_dependencies() {
 
     if [[ ${#missing_python_packages[@]} -gt 0 ]]; then
         echo -e "${RED}Error: Missing required Python packages:${NC}"
-        echo -e "  Run: ${YELLOW}pip3 install ${missing_python_packages[*]}${NC}"
+        echo -e "  Run: ${YELLOW}make deps-python${NC} or ${YELLOW}uv pip install ${missing_python_packages[*]}${NC}"
         echo ""
         has_errors=1
     fi
@@ -91,8 +92,8 @@ echo ""
 check_dependencies
 
 # Check if files exist
-if [[ ! -f "$REFERENCE_ODS" ]]; then
-    echo -e "${RED}Error: Reference file not found: $REFERENCE_ODS${NC}"
+if [[ ! -f "$REFERENCE_XLSX" ]]; then
+    echo -e "${RED}Error: Reference file not found: $REFERENCE_XLSX${NC}"
     exit 1
 fi
 
@@ -107,7 +108,7 @@ if [[ ! -f "$GENERATED_PDF" ]]; then
 fi
 
 echo -e "${BLUE}Files to compare:${NC}"
-echo "  Reference:      $REFERENCE_ODS"
+echo "  Reference:      $REFERENCE_XLSX"
 echo "  Generated XLSX: $GENERATED_XLSX"
 echo "  Generated PDF:  $GENERATED_PDF"
 echo ""
@@ -118,14 +119,14 @@ echo -e "${BLUE}Converting files to CSV...${NC}"
 # Get script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Convert reference ODS to CSV
-if ! python3 "$SCRIPT_DIR/convert-to-csv.py" "$REFERENCE_ODS" "$TEMP_DIR/reference.csv"; then
-    echo -e "${RED}Failed to convert reference ODS file${NC}"
+# Convert reference XLSX to CSV
+if ! "$PYTHON" "$SCRIPT_DIR/convert-to-csv.py" "$REFERENCE_XLSX" "$TEMP_DIR/reference.csv"; then
+    echo -e "${RED}Failed to convert reference XLSX file${NC}"
     exit 1
 fi
 
 # Convert generated XLSX to CSV
-if ! python3 "$SCRIPT_DIR/convert-to-csv.py" "$GENERATED_XLSX" "$TEMP_DIR/generated.csv"; then
+if ! "$PYTHON" "$SCRIPT_DIR/convert-to-csv.py" "$GENERATED_XLSX" "$TEMP_DIR/generated.csv"; then
     echo -e "${RED}Failed to convert generated XLSX file${NC}"
     exit 1
 fi
@@ -193,7 +194,7 @@ Generated: $(date)
 
 FILES COMPARED
 --------------
-Reference:      $REFERENCE_ODS
+Reference:      $REFERENCE_XLSX
 Generated XLSX: $GENERATED_XLSX
 Generated PDF:  $GENERATED_PDF
 
@@ -206,7 +207,7 @@ EOF
 if [[ "$EXCEL_STATUS" == "PASS" ]]; then
     cat >> "$REPORT_FILE" << EOF
 Status: PASS ✓
-The generated Excel file matches the reference ODS file exactly.
+The generated Excel file matches the reference XLSX file exactly.
 All data, formatting, and structure are identical when normalized to CSV.
 
 EOF

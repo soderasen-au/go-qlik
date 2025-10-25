@@ -21,7 +21,7 @@ make compare-pdf
 This will:
 1. Build the PDF printer tool
 2. Generate test reports (Excel + PDF)
-3. Compare outputs against reference file `test/pdf/TestReport.ods`
+3. Compare outputs against reference file `test/pdf/TestReport.xlsx`
 4. Create detailed analysis reports in `test-reports/`
 
 ## Scripts
@@ -29,7 +29,7 @@ This will:
 ### compare-reports.sh
 
 Main comparison script that:
-- Converts ODS, XLSX, and PDF to comparable formats
+- Converts XLSX and PDF to comparable formats
 - Performs byte-level CSV comparison
 - Analyzes PDF text for truncation patterns
 - Generates comprehensive text report
@@ -40,7 +40,7 @@ bash scripts/compare-reports.sh
 ```
 
 **Environment Variables:**
-- `REFERENCE_ODS`: Path to reference ODS file (default: `test/pdf/TestReport.ods`)
+- `REFERENCE_XLSX`: Path to reference XLSX file (default: `test/pdf/TestReport.xlsx`)
 - `GENERATED_XLSX`: Path to generated Excel (default: `test-reports/TestReport.xlsx`)
 - `GENERATED_PDF`: Path to generated PDF (default: `test-reports/TestReport.pdf`)
 - `OUTPUT_DIR`: Output directory for reports (default: `test-reports`)
@@ -114,7 +114,7 @@ cat test-reports/comparison-data.json | jq '.pdf_analysis.total_truncations'
 ## Current Findings
 
 ### ✅ Excel Output - PASS
-The Excel generator works perfectly. Generated XLSX files match the reference ODS file exactly when normalized to CSV format.
+The Excel generator works perfectly. Generated XLSX files match the reference XLSX file exactly when normalized to CSV format.
 
 ### ⚠️ PDF Output - TEXT TRUNCATION DETECTED
 
@@ -184,7 +184,7 @@ The comparison workflow can be integrated into CI pipelines:
 ## Dependencies
 
 ### System Requirements
-- **LibreOffice** (headless mode): For ODS/XLSX to CSV conversion
+- **LibreOffice** (headless mode): For XLSX to CSV conversion
   ```bash
   # Ubuntu/Debian
   sudo apt-get install libreoffice-calc
