@@ -19,3 +19,14 @@
 
 # Go workspace file
 go.work
+
+# Build artifacts
+bin/
+test-reports/
+coverage.html
+pdfprinter
+jwt
+test/pdf/pdfprinter
+cmd/jwt/jwt
+
+CLAUDE.md

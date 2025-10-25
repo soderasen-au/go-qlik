@@ -27,6 +27,9 @@ const (
 	DRIVER_BUILT_IN string = "built_in"
 
 	StaticColumnType string = "static"
+
+	PDF_ORIENTATION_LANDSCAPE string = "landscape"
+	PDF_ORIENTATION_PORTRAIT  string = "portrait"
 )
 
 func (f ReportFormat) IsExcel() bool {
@@ -109,10 +112,11 @@ type Report struct {
 	ColumnHeaderFormats    map[string]ColumnHeaderFormat `json:"column_header_formats,omitempty" yaml:"column_header_formats,omitempty" bson:"column_header_formats,omitempty"` // only supports stack object
 
 	// output
-	Driver       *string       `json:"driver,omitempty" yaml:"driver,omitempty" bson:"driver,omitempty"`
-	OutputFormat *ReportFormat `json:"output_format,omitempty" yaml:"output_format,omitempty" bson:"output_format,omitempty"`
-	OutputFolder *string       `json:"output_folder,omitempty" yaml:"output_folder,omitempty" bson:"output_folder,omitempty"`
-	OutputOffset *enigma.Rect  `json:"output_offset,omitempty" yaml:"output_offset,omitempty" bson:"output_offset,omitempty"`
+	Driver               *string       `json:"driver,omitempty" yaml:"driver,omitempty" bson:"driver,omitempty"`
+	OutputFormat         *ReportFormat `json:"output_format,omitempty" yaml:"output_format,omitempty" bson:"output_format,omitempty"`
+	OutputFolder         *string       `json:"output_folder,omitempty" yaml:"output_folder,omitempty" bson:"output_folder,omitempty"`
+	OutputOffset         *enigma.Rect  `json:"output_offset,omitempty" yaml:"output_offset,omitempty" bson:"output_offset,omitempty"`
+	OutputPDFOrientation *string       `json:"output_pdf_orientation,omitempty" yaml:"output_pdf_orientation,omitempty" bson:"output_pdf_orientation,omitempty"`
 
 	// logging
 	LogFolder *string         `json:"log_folder,omitempty" yaml:"log_folder,omitempty" bson:"log_folder,omitempty"`
@@ -185,6 +189,21 @@ func (r *Report) Validate() *util.Result {
 
 	if r.LogFolder == nil {
 		r.LogFolder = new(string)
+	}
+
+	// Set default PDF orientation if not specified
+	if r.OutputFormat != nil && r.OutputFormat.IsPdf() {
+		if r.OutputPDFOrientation == nil {
+			r.OutputPDFOrientation = new(string)
+			*r.OutputPDFOrientation = PDF_ORIENTATION_LANDSCAPE
+		} else {
+			// Validate orientation value
+			orientation := strings.ToLower(*r.OutputPDFOrientation)
+			if orientation != PDF_ORIENTATION_LANDSCAPE && orientation != PDF_ORIENTATION_PORTRAIT {
+				return util.MsgError("ValidateReport", fmt.Sprintf("invalid PDF orientation '%s', must be 'landscape' or 'portrait'", *r.OutputPDFOrientation))
+			}
+			*r.OutputPDFOrientation = orientation
+		}
 	}
 
 	return nil
