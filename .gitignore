@@ -32,5 +32,6 @@ cmd/jwt/jwt
 
 # IDE files
 .idea/
+.venv/
 
 CLAUDE.md
