@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/soderasen-au/go-common/crypto"
@@ -17,6 +19,7 @@ import (
 var (
 	appID        = flag.String("app-id", "0569bf97-812d-455b-9fce-83c7bb6a018d", "Application ID (Consumer Sales.qvf)")
 	bmID         = flag.String("bm-id", "35929e08-2288-420b-8f2d-fee01c8e7a94", "Bookmark ID (Bookmark1)")
+	objIDs       = flag.String("obj-ids", "KnASd", "Comma-separated list of object IDs to include in report")
 	format       = flag.String("format", "pdf", "Output format: pdf, xlsx, csv, tsv")
 	orientation  = flag.String("orientation", "portrait", "PDF orientation: portrait, landscape (only for PDF format)")
 	name         = flag.String("name", "TestPdfStackObject", "Report name")
@@ -52,8 +55,10 @@ func init() {
 		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -name \"Q4Report\" -output-folder \"./output\"\n\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  # Specify custom certificates path\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -certs-path \"/home/sa/certs/sa-win2k25\"\n\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  # Specify custom object IDs (comma-separated)\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -obj-ids \"KnASd,obj2,obj3\"\n\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  # Combine all parameters\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -app-id \"your-app-id\" -bm-id \"your-bookmark-id\" -format pdf -orientation landscape -name \"MyReport\" -output-folder \"./reports\" -certs-path \"/path/to/certs\"\n\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -app-id \"your-app-id\" -bm-id \"your-bookmark-id\" -obj-ids \"obj1,obj2\" -format pdf -orientation landscape -name \"MyReport\" -output-folder \"./reports\" -certs-path \"/path/to/certs\"\n\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  # Note: orientation is ignored for non-PDF formats\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  ./pdfprinter -format xlsx -orientation landscape  # orientation has no effect\n")
 	}
@@ -105,13 +110,20 @@ func main() {
 		return
 	}
 
-	logger, _ := loggers.GetLogger("pdf.log")
+	logFile := path.Join(*outputFolder, "pdf.log")
+	logger, _ := loggers.GetLogger(logFile)
 	doc, err := getDoc()
 	if err != nil {
 		logger.Err(err).Msg("getDoc")
 		return
 	}
 	defer doc.DisconnectFromServer()
+
+	// Parse comma-separated object IDs
+	targetIDs := strings.Split(*objIDs, ",")
+	for i := range targetIDs {
+		targetIDs[i] = strings.TrimSpace(targetIDs[i])
+	}
 
 	printer := report.NewBuiltInReportPrinter()
 	r := report.Report{
@@ -120,7 +132,7 @@ func main() {
 		AppId:     *appID,
 		Doc:       doc,
 		Target:    report.TARGET_OBJECTS,
-		TargetIDs: []string{"KnASd"},
+		TargetIDs: targetIDs,
 		Headers: []report.CustomHeader{
 			{Label: "label1", Text: "Text1"},
 			{Label: "label2", Text: "Text2"},

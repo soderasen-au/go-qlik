@@ -62,6 +62,14 @@ func (p *PdfReportPrinter) calculateColumnWidths(layout *engine.ObjectLayoutEx) 
 	for _, colIx := range ColumnOrder {
 		var colInfo *engine.ColumnInfo
 		expIx := colIx - DimCnt
+
+		// Handle negative indices (pivot tables with pseudo-dimensions)
+		if colIx < 0 {
+			// Negative colIx indicates a pseudo-dimension (measure label column in pivot tables)
+			// Skip these as they're not actual data columns
+			continue
+		}
+
 		if colIx < DimCnt {
 			dim := layout.HyperCube.DimensionInfo[colIx]
 			if dim.Error != nil {
@@ -69,6 +77,10 @@ func (p *PdfReportPrinter) calculateColumnWidths(layout *engine.ObjectLayoutEx) 
 			}
 			colInfo = engine.NewColumnInfoFromDimension(dim)
 		} else {
+			if expIx < 0 || expIx >= len(layout.HyperCube.MeasureInfo) {
+				// Invalid measure index, skip
+				continue
+			}
 			exp := layout.HyperCube.MeasureInfo[expIx]
 			if exp.Error != nil {
 				continue
@@ -218,6 +230,14 @@ func (p *PdfReportPrinter) printObjectHeader(layout *engine.ObjectLayoutEx, r Re
 		var colInfo *engine.ColumnInfo
 		expIx := colIx - DimCnt
 
+		// Handle negative indices (pivot tables with pseudo-dimensions)
+		if colIx < 0 {
+			// Negative colIx indicates a pseudo-dimension (measure label column in pivot tables)
+			// Skip these as they're not actual data columns
+			logger.Debug().Msgf("Skipping negative column index %d (pseudo-dimension)", colIx)
+			continue
+		}
+
 		if colIx < DimCnt {
 			dim := layout.HyperCube.DimensionInfo[colIx]
 			if dim.Error != nil {
@@ -226,6 +246,11 @@ func (p *PdfReportPrinter) printObjectHeader(layout *engine.ObjectLayoutEx, r Re
 			}
 			colInfo = engine.NewColumnInfoFromDimension(dim)
 		} else {
+			if expIx < 0 || expIx >= len(layout.HyperCube.MeasureInfo) {
+				// Invalid measure index, skip
+				logger.Warn().Msgf("Invalid measure index %d (colIx=%d, DimCnt=%d), skipping", expIx, colIx, DimCnt)
+				continue
+			}
 			exp := layout.HyperCube.MeasureInfo[expIx]
 			if exp.Error != nil {
 				logger.Warn().Msgf("exp[%d] %s has error, skipping", expIx, exp.FallbackTitle)
@@ -608,10 +633,10 @@ func (p *PdfReportPrinter) printObject(r Report, objId string, logger *zerolog.L
 		return p.printContainer(r, objId, logger)
 	}
 
-	// Pivot tables - currently not fully supported in PDF, print as stack
+	// Pivot tables - full support
 	if objLayout.HyperCube != nil && (objLayout.HyperCube.Mode == "P" || objLayout.HyperCube.Mode == "K") {
-		logger.Warn().Msg("Pivot tables are not fully supported in PDF, printing as standard table")
-		return p.printStackObject(r, objId, logger)
+		logger.Info().Msg("Printing pivot table")
+		return p.printPivotObject(r, objId, obj, objLayout, logger)
 	}
 
 	// Standard stack objects
@@ -875,6 +900,350 @@ func (p *PdfReportPrinter) Print(r Report) *util.Result {
 
 	rResult.PrintedRows = p.printedRows
 	logger.Info().Msgf("PDF saved to %s (%d rows)", *rResult.ReportFile, p.printedRows)
+
+	return nil
+}
+
+// Print pivot table object
+func (p *PdfReportPrinter) printPivotObject(r Report, objId string, obj *enigma.GenericObject, objLayout *engine.ObjectLayoutEx, _logger *zerolog.Logger) *util.Result {
+	logger := _logger.With().Str("Pivot", objId).Logger()
+	logger.Info().Msg("start to print pivot table")
+
+	// Expand pivot dimensions to get full hierarchy
+	obj.ExpandLeft(engine.ConnCtx, "/qHyperCubeDef", 0, 0, true)
+	obj.ExpandTop(engine.ConnCtx, "/qHyperCubeDef", 0, 0, true)
+
+	// Refresh layout after expansion
+	objLayout, res := engine.GetObjectLayoutEx(obj)
+	if res != nil {
+		logger.Err(res).Msg("GetLayout failed after expand")
+		return res.With("GetObjectLayoutEx")
+	}
+
+	if objLayout.HyperCube == nil {
+		logger.Warn().Msg("no hypercube, skipping")
+		return nil
+	}
+
+	logger.Info().Msgf("Hypercube size: %d x %d", objLayout.HyperCube.Size.Cx, objLayout.HyperCube.Size.Cy)
+
+	// Check for hypercube errors
+	if objLayout.HyperCube.Error != nil {
+		cubeErr := objLayout.HyperCube.Error
+		return util.MsgError("HyperCubeError", fmt.Sprintf("code: %d, %s", cubeErr.ErrorCode, cubeErr.ExtendedMessage))
+	}
+
+	// Ensure we have pivot data pages
+	if len(objLayout.HyperCube.PivotDataPages) == 0 {
+		logger.Warn().Msg("no pivot data pages")
+		return nil
+	}
+
+	page := objLayout.HyperCube.PivotDataPages[0]
+	noLeftDim := objLayout.HyperCube.NoOfLeftDims
+
+	// Request full header data if needed
+	headerPageArea := &enigma.NxPage{
+		Left:   0,
+		Top:    0,
+		Width:  objLayout.HyperCube.Size.Cx + noLeftDim,
+		Height: len(objLayout.HyperCube.EffectiveInterColumnSortOrder) - noLeftDim,
+	}
+	if page.Area.Width < headerPageArea.Width || page.Area.Height < headerPageArea.Height {
+		_pages := make([]*enigma.NxPage, 0)
+		_pages = append(_pages, headerPageArea)
+		_dataPages, err := obj.GetHyperCubePivotData(engine.ConnCtx, "/qHyperCubeDef", _pages)
+		if err != nil {
+			return util.Error("GetHeaderData", err)
+		}
+		objLayout.HyperCube.PivotDataPages = _dataPages
+	}
+
+	// Print pivot header (left dimension headers + top dimension hierarchy)
+	if res := p.printPivotObjectHeader(objLayout, r, &logger); res != nil {
+		return res.With("printPivotObjectHeader")
+	}
+
+	// Get full pivot data
+	pivotSz := *objLayout.HyperCube.Size
+	pivotSz.Cx += noLeftDim
+	dataPages, res := engine.GetHyperCubePivotData(obj, pivotSz)
+	if res != nil {
+		logger.Err(res).Msg("GetHyperCubePivotData failed")
+		return res.With("GetHyperCubePivotData")
+	}
+
+	logger.Info().Msgf("Got %d pivot data pages", len(dataPages))
+
+	// Print data rows
+	// First, flatten the left dimension hierarchy to get row structure
+	for pi, page := range dataPages {
+		if page.Area.Height < 1 {
+			logger.Warn().Msgf("page[%d] is empty, skipping", pi)
+			continue
+		}
+
+		pageLogger := logger.With().Int("page", pi).Logger()
+
+		// Check if we need a new page
+		if p.pdf.GetY() > p.pageHeight-PDF_MARGIN_TOP-PDF_LINE_HEIGHT*5 {
+			p.pdf.AddPage()
+			// Re-print header on new page
+			if res := p.printPivotObjectHeader(objLayout, r, &logger); res != nil {
+				return res.With("printPivotObjectHeader")
+			}
+		}
+
+		// Flatten left hierarchy into rows
+		leftRows := make([][]string, 0)
+		for _, dim := range page.Left {
+			p.flattenPivotLeftCell(dim, objLayout, 0, []string{}, &leftRows)
+		}
+
+		pageLogger.Debug().Msgf("Flattened %d left rows from %d top-level dims", len(leftRows), len(page.Left))
+
+		// Print each row: left cells + data cells
+		for ri := range leftRows {
+			// Check if we need a new page for this row
+			if p.pdf.GetY() > p.pageHeight-PDF_MARGIN_TOP-PDF_LINE_HEIGHT {
+				p.pdf.AddPage()
+				if res := p.printPivotObjectHeader(objLayout, r, &logger); res != nil {
+					return res.With("printPivotObjectHeader")
+				}
+			}
+
+			// Print left dimension cells for this row
+			for _, cellText := range leftRows[ri] {
+				p.resetCellStyle()
+				// Bold for totals
+				if cellText == "Totals" {
+					p.pdf.SetFont("Arial", "B", PDF_FONT_SIZE)
+				}
+				p.pdf.CellFormat(PDF_MAX_COL_WIDTH, PDF_LINE_HEIGHT, cellText, "1", 0, "", true, 0, "")
+			}
+
+			// Print data cells for this row
+			if ri < len(page.Data) {
+				for _, cell := range page.Data[ri] {
+					if res := p.printPivotDataCell(cell, objLayout, &pageLogger); res != nil {
+						pageLogger.Err(res).Msg("printPivotDataCell failed")
+						return res.With("printPivotDataCell")
+					}
+				}
+			}
+
+			p.pdf.Ln(-1)
+			p.printedRows++
+		}
+	}
+
+	return nil
+}
+
+// Print pivot table header (left dimension headers + flattened top dimension columns)
+func (p *PdfReportPrinter) printPivotObjectHeader(layout *engine.ObjectLayoutEx, r Report, logger *zerolog.Logger) *util.Result {
+	if layout == nil {
+		return util.MsgError("printPivotObjectHeader", "nil layout")
+	}
+
+	logger.Debug().Msg("printing pivot header")
+	noLeftDim := layout.HyperCube.NoOfLeftDims
+
+	p.pdf.SetFont("Arial", "B", PDF_HEADER_SIZE)
+	p.pdf.SetFillColor(240, 240, 240)
+	p.pdf.SetTextColor(0, 0, 0)
+
+	layout.ColumnInfos = make([]*engine.ColumnInfo, 0)
+
+	// Print left dimension headers (e.g., "Sales Rep", "Customer", "Year")
+	for i := 0; i < noLeftDim; i++ {
+		if i >= len(layout.HyperCube.DimensionInfo) {
+			break
+		}
+		dim := layout.HyperCube.DimensionInfo[i]
+		if dim.Error != nil {
+			logger.Warn().Msgf("dim[%d] %s has error, skipping", i, dim.FallbackTitle)
+			continue
+		}
+		colInfo := engine.NewColumnInfoFromDimension(dim)
+		layout.ColumnInfos = append(layout.ColumnInfos, colInfo)
+
+		cellText := colInfo.FallbackTitle
+		p.pdf.CellFormat(PDF_MAX_COL_WIDTH, PDF_LINE_HEIGHT, cellText, "1", 0, "C", true, 0, "")
+	}
+
+	// Flatten top dimension hierarchy into column headers
+	// e.g., "Jan - Sales $", "Jan - Sales Qty", "Jan - Margin %", "Feb - Sales $", ...
+	if len(layout.HyperCube.PivotDataPages) > 0 {
+		page := layout.HyperCube.PivotDataPages[0]
+		topHeaders := make([]string, 0)
+		for _, cell := range page.Top {
+			p.flattenPivotTopCell(cell, layout, 0, nil, []string{}, &topHeaders, logger)
+		}
+
+		// Print flattened column headers
+		for _, header := range topHeaders {
+			width := PDF_MIN_COL_WIDTH
+			// Try to fit header text
+			headerWidth := p.pdf.GetStringWidth(header)
+			if headerWidth > width && headerWidth < PDF_MAX_COL_WIDTH {
+				width = headerWidth + 2.0
+			}
+			p.pdf.CellFormat(width, PDF_LINE_HEIGHT, header, "1", 0, "C", true, 0, "")
+		}
+	}
+
+	p.pdf.Ln(-1)
+	p.printedRows++
+
+	return nil
+}
+
+// Flatten top dimension hierarchy into column header strings
+// Builds headers like "Jan - Sales $", "Jan - Sales Qty", etc.
+func (p *PdfReportPrinter) flattenPivotTopCell(cell *enigma.NxPivotDimensionCell, layout *engine.ObjectLayoutEx, recurLevel int, curMeasureInfo *engine.ColumnInfo, currentPath []string, headers *[]string, logger *zerolog.Logger) {
+	noLeftDim := layout.HyperCube.NoOfLeftDims
+	NoOfTopDims := len(layout.HyperCube.EffectiveInterColumnSortOrder) - noLeftDim
+
+	if NoOfTopDims > 0 && recurLevel >= NoOfTopDims {
+		return
+	}
+
+	// Add current cell text to path
+	newPath := make([]string, len(currentPath))
+	copy(newPath, currentPath)
+	if cell.Text != "" {
+		newPath = append(newPath, cell.Text)
+	}
+
+	// Determine if this is a pseudo-dimension (measure label)
+	var IsPseudoDim bool
+	if noLeftDim+recurLevel >= len(layout.HyperCube.EffectiveInterColumnSortOrder) {
+		IsPseudoDim = true
+	} else {
+		IsPseudoDim = layout.HyperCube.EffectiveInterColumnSortOrder[noLeftDim+recurLevel] < 0
+	}
+
+	// Get column info for measure formatting
+	var colInfo *engine.ColumnInfo
+	if IsPseudoDim {
+		for _, m := range layout.HyperCube.MeasureInfo {
+			if m.Error != nil {
+				continue
+			}
+			if m.FallbackTitle == cell.Text {
+				colInfo = engine.NewColumnInfoFromMeasure(m)
+				break
+			}
+		}
+	} else if curMeasureInfo != nil {
+		colInfo = curMeasureInfo
+	} else if len(cell.SubNodes) == 0 {
+		if len(layout.HyperCube.MeasureInfo) > 0 {
+			colInfo = engine.NewColumnInfoFromMeasure(layout.HyperCube.MeasureInfo[0])
+		}
+	}
+
+	// Process sub-nodes recursively
+	if len(cell.SubNodes) > 0 {
+		for _, subNode := range cell.SubNodes {
+			p.flattenPivotTopCell(subNode, layout, recurLevel+1, colInfo, newPath, headers, logger)
+		}
+	} else {
+		// Leaf node - build the complete header string
+		if colInfo != nil {
+			layout.ColumnInfos = append(layout.ColumnInfos, colInfo)
+		}
+
+		// Join path elements with separator
+		headerText := strings.Join(newPath, " - ")
+		*headers = append(*headers, headerText)
+	}
+}
+
+// Flatten left dimension hierarchy into row-based structure
+// Each row is represented as []string where each element is a cell value at that hierarchy level
+func (p *PdfReportPrinter) flattenPivotLeftCell(cell *enigma.NxPivotDimensionCell, layout *engine.ObjectLayoutEx, recurLevel int, currentRow []string, rows *[][]string) {
+	if recurLevel >= layout.HyperCube.NoOfLeftDims {
+		return
+	}
+	if recurLevel >= len(layout.HyperCube.DimensionInfo) {
+		return
+	}
+
+	// Add current cell to the row at this recursion level
+	newRow := make([]string, len(currentRow))
+	copy(newRow, currentRow)
+
+	// Extend row to accommodate this level if needed
+	for len(newRow) <= recurLevel {
+		newRow = append(newRow, "")
+	}
+	newRow[recurLevel] = cell.Text
+
+	// If this is a leaf node (no sub-nodes), add the complete row
+	if len(cell.SubNodes) == 0 {
+		// Pad the row to have all dimension levels
+		for len(newRow) < layout.HyperCube.NoOfLeftDims {
+			newRow = append(newRow, "")
+		}
+		*rows = append(*rows, newRow)
+	} else {
+		// Recursively process sub-nodes
+		for _, subNode := range cell.SubNodes {
+			p.flattenPivotLeftCell(subNode, layout, recurLevel+1, newRow, rows)
+		}
+	}
+}
+
+// Print pivot data cell (measure value)
+func (p *PdfReportPrinter) printPivotDataCell(cell *enigma.NxPivotValuePoint, layout *engine.ObjectLayoutEx, logger *zerolog.Logger) *util.Result {
+	p.resetCellStyle()
+
+	cellText := cell.Text
+	cellNum := float64(cell.Num)
+	isNum := !math.IsNaN(cellNum)
+
+	// Use numeric value if available
+	if isNum {
+		cellText = cell.Text // Already formatted by Qlik
+	}
+
+	// Apply cell styling
+	if cell.AttrExps != nil && cell.AttrExps.Values != nil && len(cell.AttrExps.Values) > 0 {
+		attrs := cell.AttrExps.Values
+		if len(attrs) > 0 {
+			bgAttr := attrs[0]
+			bgColor, res := NewARGBColorFromQlikAttr(bgAttr)
+			if res == nil && bgColor != nil {
+				p.pdf.SetFillColor(bgColor.R, bgColor.G, bgColor.B)
+
+				// Set text color based on background luminance or explicit font color
+				if len(attrs) > 1 {
+					fontAttr := attrs[1]
+					fontColor, res := NewARGBColorFromQlikAttr(fontAttr)
+					if res == nil && fontColor != nil {
+						p.pdf.SetTextColor(fontColor.R, fontColor.G, fontColor.B)
+					}
+				} else {
+					luminance := (0.299*float64(bgColor.R) + 0.587*float64(bgColor.G) + 0.114*float64(bgColor.B)) / 255.0
+					if luminance > 0.5 {
+						p.pdf.SetTextColor(0, 0, 0)
+					} else {
+						p.pdf.SetTextColor(255, 255, 255)
+					}
+				}
+			}
+		}
+	}
+
+	// Use bold for totals
+	if cell.Type == "T" {
+		p.pdf.SetFont("Arial", "B", PDF_FONT_SIZE)
+	}
+
+	width := PDF_MIN_COL_WIDTH
+	p.pdf.CellFormat(width, PDF_LINE_HEIGHT, cellText, "1", 0, "", true, 0, "")
 
 	return nil
 }
