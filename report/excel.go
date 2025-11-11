@@ -65,7 +65,7 @@ func (p *ExcelReportPrinter) printCurrentSelection(r Report, doc *enigma.Doc, sh
 	if err != nil {
 		return nil, util.Error("CoordinatesToCellName", err)
 	}
-	excel.SetCellStr(sheet, titleCellName, "CurrentSelection")
+	excel.SetCellStr(sheet, titleCellName, "Current Selection")
 	boldFont := &excelize.Style{
 		Font: &excelize.Font{
 			Bold: true,
