@@ -78,6 +78,7 @@ type CustomHeader struct {
 type ColumnHeaderFormat struct {
 	Order        int    `json:"order"`
 	Label        string `json:"label"`
+	Bold         bool   `json:"bold"`
 	FgColor      string `json:"fg_color"`
 	BgColor      string `json:"bg_color"`
 	NumFmt       string `json:"num_fmt"`

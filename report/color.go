@@ -179,6 +179,12 @@ func GetCellColorFont(attrs []*enigma.NxSimpleValue, excelStyle *excelize.Style,
 
 func (f ColumnHeaderFormat) GetHeaderCellStyle(colInfo *engine.ColumnInfo, cellLogger *zerolog.Logger) (*excelize.Style, *util.Result) {
 	excelStyle := &excelize.Style{}
+
+	cellLogger.Debug().Msgf("bold: %v", f.Bold)
+	if f.Bold {
+		excelStyle.Font = &excelize.Font{Bold: true}
+	}
+
 	cellLogger.Debug().Msgf("bg color: %s", f.BgColor)
 	bgColor, res := NewARGBFromQlikColor(f.BgColor)
 	if res != nil {

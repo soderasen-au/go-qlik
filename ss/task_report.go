@@ -112,7 +112,11 @@ func NewReportTask(s *Script, d *FuncCmdDef, n string) (TaskRunner, *util.Result
 	}
 
 	if t.Report.LogFolder == nil {
+		// TODO: either use s.Env.Logger or stash value
 		t.Report.Logger = s.Env.Logger()
+		if rf, ok := s.Env.UnstashString(StashKeyReportFolder); ok {
+			t.Report.LogFolder = util.Ptr(rf)
+		}
 	}
 
 	return t, nil
