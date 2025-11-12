@@ -42,6 +42,7 @@ func WithQrsClient(c *qrs.Client) ExecEnvOption {
 func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts ...ExecEnvOption) (*ExecEnv, *util.Result) {
 	env := new(ExecEnv)
 
+	env.EngineConn = &engine.Conn{Cfg: *cfg}
 	if logger == nil {
 		_ = env.CreateLogger()
 	} else {
@@ -54,7 +55,6 @@ func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts .
 			return nil, res.With("OpenDoc")
 		}
 	} else {
-		env.EngineConn = &engine.Conn{Cfg: *cfg}
 		env.Log.Warn().Msg("there's no appid, therefore no Engine con or Doc in Env")
 	}
 
