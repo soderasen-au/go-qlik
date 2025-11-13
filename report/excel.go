@@ -77,13 +77,25 @@ func (p *ExcelReportPrinter) printCurrentSelection(r Report, doc *enigma.Doc, sh
 	}
 	excel.SetCellStyle(sheet, titleCellName, titleCellName, styleId)
 
+	dimFieldMap := make(map[string]string)
 	dimLabelMap := make(map[string]string)
 	dimList, res := engine.GetDimensionList(doc)
 	if res == nil {
 		for _, dimItem := range dimList {
-			dimObj, _ := doc.GetDimension(engine.ConnCtx, dimItem.Info.Id)
-			dimLayout, _ := dimObj.GetLayout(engine.ConnCtx)
-			dim := dimLayout.Dim
+			dimTitle := util.MaybeNil(dimItem.Meta.Title)
+			logger.Debug().Msgf("get dimension info for label mapping: \t`%s`", dimTitle)
+			if dimItem.Dim != nil {
+				for _, fld := range dimItem.Dim.FieldDefs {
+					logger.Debug().Msgf(" - field def: `%s`", fld)
+				}
+				for _, lbl := range dimItem.Dim.FieldLabels {
+					logger.Debug().Msgf(" - field label: `%s`", lbl)
+				}
+				logger.Debug().Msgf(" - label expression: `%s`", dimItem.Dim.LabelExpression)
+			}
+			// dimObj, _ := doc.GetDimension(engine.ConnCtx, dimItem.Info.Id)
+			// dimLayout, _ := dimObj.GetLayout(engine.ConnCtx)
+			dim := dimItem.Dim
 			if len(dim.FieldDefs) < 1 {
 				continue
 			}
@@ -96,9 +108,14 @@ func (p *ExcelReportPrinter) printCurrentSelection(r Report, doc *enigma.Doc, sh
 			if len(dim.FieldLabels) > 0 {
 				dimLabel = dim.FieldLabels[0]
 			}
-
 			logger.Debug().Msgf("dimension map: `%s` => `%s`", dimDef, dimLabel)
 			dimLabelMap[dimDef] = dimLabel
+
+			if _, ok := dimFieldMap[dimDef]; ok {
+				logger.Warn().Msgf(" - `%s` has been used in `%s`, overriding it with `%s`", dimDef, dimFieldMap[dimDef], dimTitle)
+			}
+			logger.Debug().Msgf("dimension field map: `%s` => `%s`", dimDef, dimTitle)
+			dimFieldMap[dimDef] = dimTitle
 		}
 	} else {
 		logger.Warn().Err(res).Msgf("failed to get dimension list")
@@ -147,7 +164,11 @@ func (p *ExcelReportPrinter) printCurrentSelection(r Report, doc *enigma.Doc, sh
 				logger.Debug().Msgf("using dimension label: `%s` for `%s`", dname, fname)
 				fname = dname
 			}
+		} else if mappedName, ok := dimFieldMap[fname]; ok {
+			logger.Debug().Msgf("using dimension title: `%s` for `%s`", mappedName, fname)
+			fname = mappedName
 		}
+
 		cellLogger.Debug().Msgf("print cell: %s", sel.Field)
 		excel.SetCellStr(sheet, cellName, fname)
 
