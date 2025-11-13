@@ -453,6 +453,15 @@ func (p *ExcelReportPrinter) printObjectHeaderCell(r Report, excel *excelize.Fil
 			cellLogger.Warn().Msgf("can not find report column format for cube column: `%s`", cellText)
 		}
 	}
+	if r.BoldHeader {
+		if cellStyle == nil {
+			cellStyle = &excelize.Style{}
+		}
+		if cellStyle.Font == nil {
+			cellStyle.Font = &excelize.Font{}
+		}
+		cellStyle.Font.Bold = true
+	}
 
 	cellLogger.Debug().Msgf("print cell[%s]: %s", cellName, cellText)
 	excel.SetCellStr(sheet, cellName, cellText)
