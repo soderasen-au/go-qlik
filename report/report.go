@@ -112,6 +112,7 @@ type Report struct {
 	CurrentSelectionOrder  map[string]int                `json:"current_selection_order" yaml:"current_selection_order" bson:"current_selection_order"`
 	ColumnHeaderFormats    map[string]ColumnHeaderFormat `json:"column_header_formats,omitempty" yaml:"column_header_formats,omitempty" bson:"column_header_formats,omitempty"` // only supports stack object
 	BoldHeader             bool                          `json:"bold_header,omitempty" yaml:"bold_header,omitempty" bson:"bold_header,omitempty"`
+	AllBoarders            bool                          `json:"all_borders,omitempty" yaml:"all_borders,omitempty" bson:"all_borders,omitempty"`
 
 	// output
 	Driver               *string       `json:"driver,omitempty" yaml:"driver,omitempty" bson:"driver,omitempty"`

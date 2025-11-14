@@ -483,6 +483,17 @@ func (p *ExcelReportPrinter) printObjectHeaderCell(r Report, excel *excelize.Fil
 		}
 		cellStyle.Font.Bold = true
 	}
+	if r.AllBoarders {
+		if cellStyle == nil {
+			cellStyle = &excelize.Style{}
+		}
+		cellStyle.Border = []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		}
+	}
 
 	cellLogger.Debug().Msgf("print cell[%s]: %s", cellName, cellText)
 	excel.SetCellStr(sheet, cellName, cellText)
@@ -642,6 +653,18 @@ func (p *ExcelReportPrinter) printCell(excel *excelize.File, sheet string, pos C
 			}
 			excelStyle.CustomNumFmt = &colInfo.NumFormat.Fmt
 			cellLogger.Trace().Msgf("set cell num format: %s", *excelStyle.CustomNumFmt)
+		}
+	}
+
+	if p.R.AllBoarders {
+		if excelStyle == nil {
+			excelStyle = &excelize.Style{}
+		}
+		excelStyle.Border = []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
 		}
 	}
 
