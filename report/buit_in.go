@@ -35,6 +35,9 @@ func (p *BuiltInReportPrinter) Print(r Report) *util.Result {
 		r.OutputFormat = util.Ptr(REPORT_FORMAT_XLSX)
 	}
 
+	p.ExcelPrinter.R = r
+	p.CsvPrinter.R = r
+	p.PdfPrinter.R = r
 	if r.OutputFormat.IsExcel() {
 		return p.ExcelPrinter.Print(r)
 	} else if r.OutputFormat.IsCsv() {
