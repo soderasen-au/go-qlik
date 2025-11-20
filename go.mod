@@ -4,6 +4,7 @@ go 1.25
 
 require (
 	github.com/eventials/go-tus v0.0.0-20250612203642-7827b129cd4c
+	github.com/go-ole/go-ole v1.3.0
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
