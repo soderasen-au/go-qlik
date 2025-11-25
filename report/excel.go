@@ -483,7 +483,7 @@ func (p *ExcelReportPrinter) printObjectHeaderCell(r Report, excel *excelize.Fil
 		}
 		cellStyle.Font.Bold = true
 	}
-	if r.AllBoarders {
+	if r.AllBorders {
 		if cellStyle == nil {
 			cellStyle = &excelize.Style{}
 		}
@@ -569,6 +569,26 @@ func (p *ExcelReportPrinter) printPivotObjectHeader(sheet string, layout *engine
 		}
 		cellLogger.Debug().Msgf("print cell: %s", colInfo.FallbackTitle)
 		excel.SetCellStr(sheet, cellName, colInfo.FallbackTitle)
+
+		var excelStyle *excelize.Style
+		if p.R.AllBorders {
+			excelStyle = &excelize.Style{}
+			excelStyle.Border = []excelize.Border{
+				{Type: "left", Color: "000000", Style: 1},
+				{Type: "top", Color: "000000", Style: 1},
+				{Type: "right", Color: "000000", Style: 1},
+				{Type: "bottom", Color: "000000", Style: 1},
+			}
+		}
+		if excelStyle != nil {
+			styleId, err := excel.NewStyle(excelStyle)
+			if err != nil {
+				logger.Err(err).Msg("NewStyle")
+				return nil, util.Error("NewStyle", err)
+			}
+
+			excel.SetCellStyle(sheet, cellName, cellName, styleId)
+		}
 
 		colName, _, err := excelize.SplitCellName(cellName)
 		if err != nil {
@@ -656,7 +676,7 @@ func (p *ExcelReportPrinter) printCell(excel *excelize.File, sheet string, pos C
 		}
 	}
 
-	if p.R.AllBoarders {
+	if p.R.AllBorders {
 		if excelStyle == nil {
 			excelStyle = &excelize.Style{}
 		}
@@ -726,6 +746,18 @@ func (p *ExcelReportPrinter) printPivotDataCell(excel *excelize.File, sheet stri
 		}
 	} else {
 		cellLogger.Error().Msgf("failed to export: (%d, %d)", pos.CubeRowIx, pos.CubeColIx)
+	}
+
+	if p.R.AllBorders {
+		if excelStyle == nil {
+			excelStyle = &excelize.Style{}
+		}
+		excelStyle.Border = []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		}
 	}
 
 	if excelStyle != nil {
@@ -1270,13 +1302,33 @@ func (p *ExcelReportPrinter) printPivotTopCell(excel *excelize.File, sheet strin
 			return ret, util.Error("SetCellStr", err)
 		}
 		cellLogger.Debug().Msgf("content: %s", cell.Text)
+
+		var excelStyle *excelize.Style
+		if cell.AttrExps != nil && cell.AttrExps.Values != nil && len(cell.AttrExps.Values) > 0 {
+			GetCellColorFont(cell.AttrExps.Values, excelStyle, &cellLogger)
+		}
 		if cell.Type == "T" {
-			boldFont := &excelize.Style{
-				Font: &excelize.Font{
-					Bold: true,
-				},
+			if excelStyle == nil {
+				excelStyle = &excelize.Style{}
 			}
-			styleId, err := excel.NewStyle(boldFont)
+			if excelStyle.Font == nil {
+				excelStyle.Font = &excelize.Font{}
+			}
+			excelStyle.Font.Bold = true
+		}
+		if p.R.AllBorders {
+			if excelStyle == nil {
+				excelStyle = &excelize.Style{}
+			}
+			excelStyle.Border = []excelize.Border{
+				{Type: "left", Color: "000000", Style: 1},
+				{Type: "top", Color: "000000", Style: 1},
+				{Type: "right", Color: "000000", Style: 1},
+				{Type: "bottom", Color: "000000", Style: 1},
+			}
+		}
+		if excelStyle != nil {
+			styleId, err := excel.NewStyle(excelStyle)
 			if err != nil {
 				logger.Err(err).Msg("NewStyle")
 				return ret, util.Error("NewStyle", err)
@@ -1309,6 +1361,14 @@ func (p *ExcelReportPrinter) printPivotTopCell(excel *excelize.File, sheet strin
 				Horizontal: "center",
 				Vertical:   "center",
 			},
+		}
+		if p.R.AllBorders {
+			centerAlign.Border = []excelize.Border{
+				{Type: "left", Color: "000000", Style: 1},
+				{Type: "top", Color: "000000", Style: 1},
+				{Type: "right", Color: "000000", Style: 1},
+				{Type: "bottom", Color: "000000", Style: 1},
+			}
 		}
 		styleId, err := excel.NewStyle(centerAlign)
 		if err != nil {
@@ -1371,16 +1431,36 @@ func (p *ExcelReportPrinter) printPivotLeftCell(excel *excelize.File, sheet stri
 			return -1, util.Error("SetCellStr", err)
 		}
 		cellLogger.Debug().Msgf("content: %s", cell.Text)
+
+		var excelStyle *excelize.Style
+		if cell.AttrExps != nil && cell.AttrExps.Values != nil && len(cell.AttrExps.Values) > 0 {
+			GetCellColorFont(cell.AttrExps.Values, excelStyle, &cellLogger)
+		}
 		if cell.Type == "T" {
-			boldFont := &excelize.Style{
-				Font: &excelize.Font{
-					Bold: true,
-				},
+			if excelStyle == nil {
+				excelStyle = &excelize.Style{}
 			}
-			styleId, err := excel.NewStyle(boldFont)
+			if excelStyle.Font == nil {
+				excelStyle.Font = &excelize.Font{}
+			}
+			excelStyle.Font.Bold = true
+		}
+		if p.R.AllBorders {
+			if excelStyle == nil {
+				excelStyle = &excelize.Style{}
+			}
+			excelStyle.Border = []excelize.Border{
+				{Type: "left", Color: "000000", Style: 1},
+				{Type: "top", Color: "000000", Style: 1},
+				{Type: "right", Color: "000000", Style: 1},
+				{Type: "bottom", Color: "000000", Style: 1},
+			}
+		}
+		if excelStyle != nil {
+			styleId, err := excel.NewStyle(excelStyle)
 			if err != nil {
 				logger.Err(err).Msg("NewStyle")
-				return -1, util.Error("NewStyle", err)
+				return -2, util.Error("NewStyle", err)
 			}
 
 			excel.SetCellStyle(sheet, cellName, cellName, styleId)
@@ -1409,6 +1489,14 @@ func (p *ExcelReportPrinter) printPivotLeftCell(excel *excelize.File, sheet stri
 			Alignment: &excelize.Alignment{
 				Vertical: "center",
 			},
+		}
+		if p.R.AllBorders {
+			centerAlign.Border = []excelize.Border{
+				{Type: "left", Color: "000000", Style: 1},
+				{Type: "top", Color: "000000", Style: 1},
+				{Type: "right", Color: "000000", Style: 1},
+				{Type: "bottom", Color: "000000", Style: 1},
+			}
 		}
 		styleId, err := excel.NewStyle(centerAlign)
 		if err != nil {
