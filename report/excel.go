@@ -580,6 +580,15 @@ func (p *ExcelReportPrinter) printPivotObjectHeader(sheet string, layout *engine
 				{Type: "bottom", Color: "000000", Style: 1},
 			}
 		}
+		if p.R.BoldHeader {
+			if excelStyle == nil {
+				excelStyle = &excelize.Style{}
+			}
+			if excelStyle.Font == nil {
+				excelStyle.Font = &excelize.Font{}
+			}
+			excelStyle.Font.Bold = true
+		}
 		if excelStyle != nil {
 			styleId, err := excel.NewStyle(excelStyle)
 			if err != nil {
@@ -1327,6 +1336,15 @@ func (p *ExcelReportPrinter) printPivotTopCell(excel *excelize.File, sheet strin
 				{Type: "bottom", Color: "000000", Style: 1},
 			}
 		}
+		if p.R.BoldHeader {
+			if excelStyle == nil {
+				excelStyle = &excelize.Style{}
+			}
+			if excelStyle.Font == nil {
+				excelStyle.Font = &excelize.Font{}
+			}
+			excelStyle.Font.Bold = true
+		}
 		if excelStyle != nil {
 			styleId, err := excel.NewStyle(excelStyle)
 			if err != nil {
@@ -1369,6 +1387,12 @@ func (p *ExcelReportPrinter) printPivotTopCell(excel *excelize.File, sheet strin
 				{Type: "right", Color: "000000", Style: 1},
 				{Type: "bottom", Color: "000000", Style: 1},
 			}
+		}
+		if p.R.BoldHeader {
+			if centerAlign.Font == nil {
+				centerAlign.Font = &excelize.Font{}
+			}
+			centerAlign.Font.Bold = true
 		}
 		styleId, err := excel.NewStyle(centerAlign)
 		if err != nil {
