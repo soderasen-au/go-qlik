@@ -350,7 +350,11 @@ func (p *ExcelReportPrinter) printObjectHeader(sheet string, layout *engine.Obje
 
 	ColumnOrder := layout.HyperCube.ColumnOrder
 	if ColumnOrder == nil || len(ColumnOrder) == 0 {
-		ColumnOrder = layout.HyperCube.EffectiveInterColumnSortOrder
+		//ColumnOrder = layout.HyperCube.EffectiveInterColumnSortOrder
+		ColumnOrder = make([]int, len(layout.HyperCube.EffectiveInterColumnSortOrder))
+		for i := range layout.HyperCube.EffectiveInterColumnSortOrder {
+			ColumnOrder[i] = i
+		}
 	}
 
 	var colInfo *engine.ColumnInfo

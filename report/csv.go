@@ -41,7 +41,11 @@ func (p *CsvReportPrinter) printObjectHeader() *util.Result {
 
 	ColumnOrder := p.ObjLayout.HyperCube.ColumnOrder
 	if ColumnOrder == nil || len(ColumnOrder) == 0 {
-		ColumnOrder = p.ObjLayout.HyperCube.EffectiveInterColumnSortOrder
+		//ColumnOrder = layout.HyperCube.EffectiveInterColumnSortOrder
+		ColumnOrder = make([]int, len(p.ObjLayout.HyperCube.EffectiveInterColumnSortOrder))
+		for i := range p.ObjLayout.HyperCube.EffectiveInterColumnSortOrder {
+			ColumnOrder[i] = i
+		}
 	}
 
 	var colInfo *engine.ColumnInfo
