@@ -636,8 +636,9 @@ func (p *ExcelReportPrinter) printPivotObjectHeader(sheet string, layout *engine
 			return nil, res.With("printPivotTopCell")
 		}
 		c0 += subrect.Width
-		if resRect.Height != subrect.Height {
+		if resRect.Height < subrect.Height {
 			logger.Warn().Msgf("pivot header is wrong?")
+			resRect.Height = subrect.Height
 		}
 	}
 	resRect.Width = c0 - rect.Left
@@ -1099,22 +1100,31 @@ func (p *ExcelReportPrinter) printPivotObject(doc *enigma.Doc, r Report, objId, 
 		return nil, res.With("CheckRowsLimit")
 	}
 
-	page := objLayout.HyperCube.PivotDataPages[0]
-	headerPageArea := &enigma.NxPage{
-		Left:   0,
-		Top:    0,
-		Width:  objLayout.HyperCube.Size.Cx + objLayout.HyperCube.NoOfLeftDims,
-		Height: len(objLayout.HyperCube.EffectiveInterColumnSortOrder) - objLayout.HyperCube.NoOfLeftDims,
+	pivotSz := *objLayout.HyperCube.Size
+	dataPages, res := engine.GetHyperCubePivotData(obj, pivotSz)
+	if res != nil {
+		logger.Err(res).Msg("GetHyperCubeData failed")
+		return nil, util.Error("engine.GetHyperCubeData", res)
 	}
-	if page.Area.Width < headerPageArea.Width || page.Area.Height < headerPageArea.Height {
-		_pages := make([]*enigma.NxPage, 0)
-		_pages = append(_pages, headerPageArea)
-		_dataPages, err := obj.GetHyperCubePivotData(engine.ConnCtx, "/qHyperCubeDef", _pages)
-		if err != nil {
-			return nil, util.Error("GetHeaderData", err)
-		}
-		objLayout.HyperCube.PivotDataPages = _dataPages
-	}
+	logger.Info().Msgf("Hypercube: %d", len(dataPages))
+	objLayout.HyperCube.PivotDataPages = dataPages
+
+	// page := objLayout.HyperCube.PivotDataPages[0]
+	// headerPageArea := &enigma.NxPage{
+	// 	Left:   0,
+	// 	Top:    0,
+	// 	Width:  objLayout.HyperCube.Size.Cx + objLayout.HyperCube.NoOfLeftDims,
+	// 	Height: len(objLayout.HyperCube.EffectiveInterColumnSortOrder) - objLayout.HyperCube.NoOfLeftDims,
+	// }
+	// if page.Area.Width < headerPageArea.Width || page.Area.Height < headerPageArea.Height {
+	// 	_pages := make([]*enigma.NxPage, 0)
+	// 	_pages = append(_pages, headerPageArea)
+	// 	_dataPages, err := obj.GetHyperCubePivotData(engine.ConnCtx, "/qHyperCubeDef", _pages)
+	// 	if err != nil {
+	// 		return nil, util.Error("GetHeaderData", err)
+	// 	}
+	// 	objLayout.HyperCube.PivotDataPages = _dataPages
+	// }
 
 	totalRows := 0
 	sheetName := objId
@@ -1138,18 +1148,11 @@ func (p *ExcelReportPrinter) printPivotObject(doc *enigma.Doc, r Report, objId, 
 		logger.Err(res).Msg("printObjectHeader failed")
 		return nil, res.With("printObjectHeader")
 	}
-	pivotSz := *objLayout.HyperCube.Size
+
 	pivotSz.Cx += objLayout.HyperCube.NoOfLeftDims
 	if pivotSz.Cx != headerRect.Width {
 		logger.Warn().Msgf("printed data cells[%d] != header cells[%d]", pivotSz.Cx, headerRect.Width)
 	}
-
-	dataPages, res := engine.GetHyperCubePivotData(obj, pivotSz)
-	if res != nil {
-		logger.Err(res).Msg("GetHyperCubeData failed")
-		return nil, util.Error("engine.GetHyperCubeData", res)
-	}
-	logger.Info().Msgf("Hypercube: %d", len(dataPages))
 
 	resRect.Top = headerRect.Top
 	resRect.Left = headerRect.Left
