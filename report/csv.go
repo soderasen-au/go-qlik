@@ -152,56 +152,85 @@ func (p *CsvReportPrinter) printStackObject() *util.Result {
 		logger.Err(res).Msg("GetHyperCubeData failed")
 		return res.With("GetHyperCubeData")
 	}
-	logger.Info().Msgf("Hypercube: %d", len(dataPages))
+	logger.Info().Msgf("Hypercube: %d data pages", len(dataPages))
 
-	for pi, page := range dataPages {
+	// Reorganize pages into a row-based structure to handle column pagination
+	// When hypercube has many columns, data is split into multiple pages with different Area.Left offsets
+	// Map: rowIndex -> map[colIndex]cell
+	type cellData struct {
+		text string
+		num  float64
+	}
+	rowData := make(map[int]map[int]*cellData)
+	maxRow := 0
+
+	for _, page := range dataPages {
 		if page.Area.Height < 1 {
-			logger.Warn().Msgf("page: [%d] is empty, ignore ...", pi)
 			continue
 		}
 
-		pageLogger := logger.With().Str(fmt.Sprintf("page[%d]", pi), fmt.Sprintf("(%d, %d)", p.RowCnt, p.ColCnt)).Logger()
-		pageLogger.Debug().Msg("start")
-
-		records := make([][]string, len(page.Matrix))
-		for ri, row := range page.Matrix {
-			records[ri] = make([]string, len(row))
-			for cubeColIx, cell := range row {
-				ci := p.Cube2report[cubeColIx]
-				if colFmt, ok := p.Cube2CustomFmt[cubeColIx]; ok {
-					if colFmt != nil {
-						if colFmt.NumFmt != "" {
-							txt, res := FormatNum(float64(cell.Num), colFmt.NumFmt)
-							if res != nil {
-								pageLogger.Error().Msgf("FormatNum: %s", res.Error())
-								records[ri][ci] = cell.Text
-							} else {
-								records[ri][ci] = txt
-							}
-						} else if colFmt.DateFmt != "" {
-							records[ri][ci] = FormatDate(float64(cell.Num), colFmt.DateFmt)
-						} else {
-							records[ri][ci] = cell.Text
-						}
-					} else {
-						pageLogger.Warn().Msgf("p.Cube2CustomFmt[%d] is empty", cubeColIx)
-						records[ri][ci] = cell.Text
-					}
-				} else {
-					pageLogger.Trace().Msgf("p.Cube2CustomFmt has no cube idx: %d", cubeColIx)
-					records[ri][ci] = cell.Text
-				}
+		for ri, rowCells := range page.Matrix {
+			absoluteRowIdx := page.Area.Top + ri
+			if absoluteRowIdx > maxRow {
+				maxRow = absoluteRowIdx
 			}
-			p.RowCnt++
+
+			if rowData[absoluteRowIdx] == nil {
+				rowData[absoluteRowIdx] = make(map[int]*cellData)
+			}
+
+			for ci, cell := range rowCells {
+				cubeColIx := page.Area.Left + ci
+				rowData[absoluteRowIdx][cubeColIx] = &cellData{text: cell.Text, num: float64(cell.Num)}
+			}
 		}
-		err = p.Writer.WriteAll(records)
-		if err != nil {
-			pageLogger.Err(err).Msg("GetHyperCubeData")
-			return res.With("GetHyperCubeData")
-		}
-		p.Writer.Flush()
-		pageLogger.Debug().Msg("end")
 	}
+	logger.Info().Msgf("fetched %d rows from %d data pages", maxRow+1, len(dataPages))
+
+	// Convert map structure to ordered records and write
+	for rowIdx := 0; rowIdx <= maxRow; rowIdx++ {
+		record := make([]string, p.ColCnt)
+		cells, exists := rowData[rowIdx]
+		if !exists {
+			continue
+		}
+
+		for cubeColIx, cell := range cells {
+			if cell == nil {
+				continue
+			}
+			ci, ok := p.Cube2report[cubeColIx]
+			if !ok || ci >= p.ColCnt {
+				continue
+			}
+
+			if colFmt, ok := p.Cube2CustomFmt[cubeColIx]; ok && colFmt != nil {
+				if colFmt.NumFmt != "" {
+					txt, fmtRes := FormatNum(cell.num, colFmt.NumFmt)
+					if fmtRes != nil {
+						logger.Error().Msgf("FormatNum: %s", fmtRes.Error())
+						record[ci] = cell.text
+					} else {
+						record[ci] = txt
+					}
+				} else if colFmt.DateFmt != "" {
+					record[ci] = FormatDate(cell.num, colFmt.DateFmt)
+				} else {
+					record[ci] = cell.text
+				}
+			} else {
+				record[ci] = cell.text
+			}
+		}
+
+		err = p.Writer.Write(record)
+		if err != nil {
+			logger.Err(err).Msgf("Write row %d", rowIdx)
+			return util.Error("WriteCSV", err)
+		}
+		p.RowCnt++
+	}
+	p.Writer.Flush()
 
 	reportResult, res := p.GetReportResult(*p.R.ID)
 	if res != nil {

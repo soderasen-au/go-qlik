@@ -1,4 +1,4 @@
-.PHONY: all build build-jwt build-pdfprinter test clean deps deps-python fmt vet lint help test-pdf compare-pdf test-pivot compare-pivot
+.PHONY: all build build-jwt build-pdfprinter build-excel-paging test clean deps deps-python fmt vet lint help test-pdf compare-pdf test-pivot compare-pivot test-excel-paging compare-excel-paging
 
 # Python interpreter (use virtual environment if available)
 PYTHON := $(shell if [ -f .venv/bin/python3 ]; then echo .venv/bin/python3; else echo python3; fi)
@@ -7,7 +7,7 @@ PYTHON := $(shell if [ -f .venv/bin/python3 ]; then echo .venv/bin/python3; else
 all: deps fmt vet build test
 
 # Build all binaries
-build: build-jwt build-pdfprinter
+build: build-jwt build-pdfprinter build-excel-paging
 
 # Build JWT encoder/decoder tool
 build-jwt:
@@ -18,6 +18,11 @@ build-jwt:
 build-pdfprinter:
 	@echo "Building PDF printer..."
 	@go build -o bin/pdfprinter ./test/pdf
+
+# Build Excel paging printer tool
+build-excel-paging:
+	@echo "Building Excel paging printer..."
+	@go build -o bin/excel_paging ./test/excel_paging
 
 # Run all tests
 test:
@@ -77,6 +82,42 @@ compare-pdf: test-pdf deps-python
 	@if [ -f test-reports/comparison-data.json ]; then \
 		echo "  📊 JSON Data:    test-reports/comparison-data.json"; \
 	fi
+
+# Generate paginated Excel report using excel_paging tool
+test-excel-paging: build-excel-paging
+	@echo "Generating paginated Excel report..."
+	@mkdir -p test-reports
+	@echo "  - Generating paginated report with 100 rows per page..."
+	@./bin/excel_paging -rows-per-page 100 -title "Paginated Sales Report" \
+		-show-col-nums -show-subtotals -all-borders \
+		-name "TestPaginatedReport" -output-folder test-reports \
+		-certs-path test/certs/sa-win2k25
+	@echo "✓ Paginated report generated in test-reports/"
+	@ls -lh test-reports/Paginated*.xlsx 2>/dev/null || ls -lh test-reports/TestPaginatedReport.xlsx 2>/dev/null || echo "  (check test-reports/ for output)"
+
+# Compare paginated Excel report with reference
+# Uses Python script to compare cell values across all sheets
+compare-excel-paging: test-excel-paging
+	@echo "Comparing paginated Excel report with reference..."
+	@if [ ! -f test/excel_paging/PaginatedSalesReport_reference.xlsx ]; then \
+		echo "❌ Reference file not found: test/excel_paging/PaginatedSalesReport_reference.xlsx"; \
+		exit 1; \
+	fi
+	@GENERATED_FILE=$$(ls test-reports/Paginated*.xlsx 2>/dev/null | head -1); \
+	if [ -z "$$GENERATED_FILE" ]; then \
+		GENERATED_FILE="test-reports/TestPaginatedReport.xlsx"; \
+	fi; \
+	if [ ! -f "$$GENERATED_FILE" ]; then \
+		echo "❌ Generated file not found. The tool may have crashed."; \
+		echo "  Check test-reports/excel_paging.log for error details."; \
+		exit 1; \
+	fi; \
+	echo "  - Reference: test/excel_paging/PaginatedSalesReport_reference.xlsx"; \
+	echo "  - Generated: $$GENERATED_FILE"; \
+	echo ""; \
+	$(PYTHON) scripts/compare-excel.py \
+		test/excel_paging/PaginatedSalesReport_reference.xlsx \
+		"$$GENERATED_FILE"
 
 # Compare pivot table report with reference
 # Generate PDF with obj-ids=RfEbJ and compare content with baseline XLSX
@@ -175,29 +216,36 @@ install: build
 # Show help
 help:
 	@echo "Available targets:"
-	@echo "  all              - Run deps, fmt, vet, build, and test (default)"
-	@echo "  build            - Build all binaries (jwt, pdfprinter)"
-	@echo "  build-jwt        - Build JWT tool only"
-	@echo "  build-pdfprinter - Build PDF printer only"
-	@echo "  test             - Run all tests"
-	@echo "  test-engine      - Run engine package tests"
-	@echo "  test-qrs         - Run QRS package tests"
-	@echo "  test-report      - Run report package tests"
-	@echo "  test-pdf         - Generate test reports (1 xlsx, 1 pdf) using pdfprinter"
-	@echo "  test-pivot       - Generate pivot table PDF report (obj-ids=RfEbJ)"
-	@echo "  compare-pdf      - Generate reports and compare with reference"
-	@echo "                     (requires: python3, poppler, uv)"
-	@echo "                     Install: pip install uv, brew install poppler (macOS)"
-	@echo "  compare-pivot    - Generate pivot table PDF and compare with baseline XLSX"
-	@echo "                     (requires: poppler, libreoffice)"
-	@echo "                     Use this to debug and fix pivot table rendering issues"
-	@echo "  test-coverage    - Run tests with coverage report"
-	@echo "  deps             - Download and tidy Go dependencies"
-	@echo "  deps-python      - Install Python dependencies for report comparison"
-	@echo "  fmt              - Format Go code"
-	@echo "  vet              - Run go vet"
-	@echo "  lint             - Run golint (if installed)"
-	@echo "  staticcheck      - Run staticcheck (if installed)"
-	@echo "  clean            - Remove build artifacts and generated files"
-	@echo "  install          - Build and install binaries to bin/"
-	@echo "  help             - Show this help message"
+	@echo "  all                - Run deps, fmt, vet, build, and test (default)"
+	@echo "  build              - Build all binaries (jwt, pdfprinter, excel_paging)"
+	@echo "  build-jwt          - Build JWT tool only"
+	@echo "  build-pdfprinter   - Build PDF printer only"
+	@echo "  build-excel-paging - Build Excel paging printer only"
+	@echo "  test               - Run all tests"
+	@echo "  test-engine        - Run engine package tests"
+	@echo "  test-qrs           - Run QRS package tests"
+	@echo "  test-report        - Run report package tests"
+	@echo "  test-pdf           - Generate test reports (1 xlsx, 1 pdf) using pdfprinter"
+	@echo "  test-pivot         - Generate pivot table PDF report (obj-ids=RfEbJ)"
+	@echo "  test-excel-paging  - Generate paginated Excel report with multiple sheets"
+	@echo "                       Each sheet contains rows_per_page rows with headers,"
+	@echo "                       selections, column numbers, and page subtotals"
+	@echo "  compare-excel-paging - Generate paginated Excel and compare with reference"
+	@echo "                       (requires: python3, openpyxl)"
+	@echo "                       Install: pip install openpyxl"
+	@echo "  compare-pdf        - Generate reports and compare with reference"
+	@echo "                       (requires: python3, poppler, uv)"
+	@echo "                       Install: pip install uv, brew install poppler (macOS)"
+	@echo "  compare-pivot      - Generate pivot table PDF and compare with baseline XLSX"
+	@echo "                       (requires: poppler, libreoffice)"
+	@echo "                       Use this to debug and fix pivot table rendering issues"
+	@echo "  test-coverage      - Run tests with coverage report"
+	@echo "  deps               - Download and tidy Go dependencies"
+	@echo "  deps-python        - Install Python dependencies for report comparison"
+	@echo "  fmt                - Format Go code"
+	@echo "  vet                - Run go vet"
+	@echo "  lint               - Run golint (if installed)"
+	@echo "  staticcheck        - Run staticcheck (if installed)"
+	@echo "  clean              - Remove build artifacts and generated files"
+	@echo "  install            - Build and install binaries to bin/"
+	@echo "  help               - Show this help message"
