@@ -3,22 +3,27 @@ package report
 import "github.com/soderasen-au/go-common/util"
 
 type BuiltInReportPrinter struct {
-	ExcelPrinter *ExcelReportPrinter
-	CsvPrinter   *CsvReportPrinter
-	PdfPrinter   *PdfReportPrinter
+	ExcelPrinter       *ExcelReportPrinter
+	ExcelPagingPrinter *ExcelPagingPrinter
+	CsvPrinter         *CsvReportPrinter
+	PdfPrinter         *PdfReportPrinter
 }
 
 func NewBuiltInReportPrinter() *BuiltInReportPrinter {
 	p := &BuiltInReportPrinter{
-		ExcelPrinter: NewExcelReportPrinter(),
-		CsvPrinter:   NewCsvReportPrinter(),
-		PdfPrinter:   NewPdfReportPrinter(),
+		ExcelPrinter:       NewExcelReportPrinter(),
+		ExcelPagingPrinter: NewExcelPagingPrinter(DefaultExcelPagingConfig()),
+		CsvPrinter:         NewCsvReportPrinter(),
+		PdfPrinter:         NewPdfReportPrinter(),
 	}
 	return p
 }
 
 func (p BuiltInReportPrinter) GetReportResult(id string) (*ReportResult, *util.Result) {
 	if result, res := p.ExcelPrinter.GetReportResult(id); res == nil {
+		return result, nil
+	}
+	if result, res := p.ExcelPagingPrinter.GetReportResult(id); res == nil {
 		return result, nil
 	}
 	if result, res := p.CsvPrinter.GetReportResult(id); res == nil {
@@ -40,6 +45,8 @@ func (p *BuiltInReportPrinter) Print(r Report) *util.Result {
 	p.PdfPrinter.R = r
 	if r.OutputFormat.IsExcel() {
 		return p.ExcelPrinter.Print(r)
+	} else if r.OutputFormat.IsPagedExcel() {
+		return p.ExcelPagingPrinter.Print(r)
 	} else if r.OutputFormat.IsCsv() {
 		return p.CsvPrinter.Print(r)
 	} else if r.OutputFormat.IsPdf() {

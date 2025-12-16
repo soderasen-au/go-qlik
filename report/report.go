@@ -15,10 +15,11 @@ import (
 type ReportFormat string
 
 const (
-	REPORT_FORMAT_XLSX ReportFormat = "xlsx"
-	REPORT_FORMAT_CSV  ReportFormat = "csv"
-	REPORT_FORMAT_TSV  ReportFormat = "tsv"
-	REPORT_FORMAT_PDF  ReportFormat = "pdf"
+	REPORT_FORMAT_XLSX       ReportFormat = "xlsx"
+	REPORT_FORMAT_PAGED_XLSX ReportFormat = "paged_xlsx"
+	REPORT_FORMAT_CSV        ReportFormat = "csv"
+	REPORT_FORMAT_TSV        ReportFormat = "tsv"
+	REPORT_FORMAT_PDF        ReportFormat = "pdf"
 
 	TARGET_OBJECTS string = "objects"
 	TARGET_SHEET   string = "sheet"
@@ -36,6 +37,10 @@ func (f ReportFormat) IsExcel() bool {
 	return f == REPORT_FORMAT_XLSX
 }
 
+func (f ReportFormat) IsPagedExcel() bool {
+	return f == REPORT_FORMAT_PAGED_XLSX
+}
+
 func (f ReportFormat) IsCsv() bool {
 	return f == REPORT_FORMAT_CSV || f == REPORT_FORMAT_TSV
 }
@@ -49,13 +54,22 @@ func (f ReportFormat) IsPdf() bool {
 }
 
 func (f ReportFormat) IsValid() bool {
-	return f.IsExcel() || f.IsCsv() || f.IsPdf()
+	return f.IsExcel() || f.IsPagedExcel() || f.IsCsv() || f.IsPdf()
 }
 
 func (f *ReportFormat) MaybeDefault() {
 	if !f.IsValid() {
 		*f = REPORT_FORMAT_XLSX
 	}
+}
+
+// FileExtension returns the file extension for the report format.
+// paged_xlsx maps to xlsx since both produce Excel files.
+func (f ReportFormat) FileExtension() string {
+	if f.IsPagedExcel() {
+		return "xlsx"
+	}
+	return string(f)
 }
 
 type ReportPrinterBase struct {
@@ -229,12 +243,13 @@ func NewReportResult(r Report) (*ReportResult, *util.Result) {
 	rr := ReportResult{}
 
 	var rf string
+	fileExt := r.OutputFormat.FileExtension()
 	if r.Name != nil && len(*r.Name) > 0 {
 		rn := strings.ReplaceAll(*r.Name, "/", "_")
 		rn = strings.ReplaceAll(rn, "\\", "_")
-		rf = filepath.Join(util.MaybeNil(r.OutputFolder), fmt.Sprintf("%s.%s", rn, *r.OutputFormat))
+		rf = filepath.Join(util.MaybeNil(r.OutputFolder), fmt.Sprintf("%s.%s", rn, fileExt))
 	} else {
-		rf = filepath.Join(util.MaybeNil(r.OutputFolder), fmt.Sprintf("%s.%s", util.MaybeNil(r.ID), *r.OutputFormat))
+		rf = filepath.Join(util.MaybeNil(r.OutputFolder), fmt.Sprintf("%s.%s", util.MaybeNil(r.ID), fileExt))
 	}
 	rr.ReportFile = &rf
 
