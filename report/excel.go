@@ -99,7 +99,7 @@ func (p *ExcelReportPrinter) printCurrentSelection(r Report, doc *enigma.Doc, sh
 			if len(dim.FieldDefs) < 1 {
 				continue
 			}
-			dimDef := dim.FieldDefs[0]
+			dimDef := strings.ToLower(dim.FieldDefs[0])
 
 			if _, ok := dimLabelMap[dimDef]; ok {
 				logger.Warn().Msgf(" - `%s` has been used in `%s`, overriding it with `%s`", dimDef, dimLabelMap[dimDef], dim.LabelExpression)
@@ -159,6 +159,7 @@ func (p *ExcelReportPrinter) printCurrentSelection(r Report, doc *enigma.Doc, sh
 			return nil, util.Error("CoordinatesToCellName", err)
 		}
 
+		fname = strings.ToLower(fname)
 		if strings.HasPrefix(fname, "=") {
 			if dname, ok := dimLabelMap[fname]; ok {
 				logger.Debug().Msgf("using dimension label: `%s` for `%s`", dname, fname)
