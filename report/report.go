@@ -103,6 +103,11 @@ type ColumnHeaderFormat struct {
 	SrcFieldName string `json:"src_field_name"`
 }
 
+type PaginationConfig struct {
+	RowsPerPage       int    `json:"rows_per_page,omitempty" yaml:"rows_per_page,omitempty" bson:"rows_per_page,omitempty"`
+	TotalRecordsLabel string `json:"total_records_label" yaml:"total_records_label" bson:"total_records_label"`
+}
+
 // user has to apply any needed selection before printing report
 type Report struct {
 	ID    *string `json:"id,omitempty" yaml:"id,omitempty" bson:"id,omitempty"`
@@ -129,11 +134,12 @@ type Report struct {
 	AllBorders             bool                          `json:"all_borders,omitempty" yaml:"all_borders,omitempty" bson:"all_borders,omitempty"`
 
 	// output
-	Driver               *string       `json:"driver,omitempty" yaml:"driver,omitempty" bson:"driver,omitempty"`
-	OutputFormat         *ReportFormat `json:"output_format,omitempty" yaml:"output_format,omitempty" bson:"output_format,omitempty"`
-	OutputFolder         *string       `json:"output_folder,omitempty" yaml:"output_folder,omitempty" bson:"output_folder,omitempty"`
-	OutputOffset         *enigma.Rect  `json:"output_offset,omitempty" yaml:"output_offset,omitempty" bson:"output_offset,omitempty"`
-	OutputPDFOrientation *string       `json:"output_pdf_orientation,omitempty" yaml:"output_pdf_orientation,omitempty" bson:"output_pdf_orientation,omitempty"`
+	Driver               *string           `json:"driver,omitempty" yaml:"driver,omitempty" bson:"driver,omitempty"`
+	OutputFormat         *ReportFormat     `json:"output_format,omitempty" yaml:"output_format,omitempty" bson:"output_format,omitempty"`
+	OutputFolder         *string           `json:"output_folder,omitempty" yaml:"output_folder,omitempty" bson:"output_folder,omitempty"`
+	OutputOffset         *enigma.Rect      `json:"output_offset,omitempty" yaml:"output_offset,omitempty" bson:"output_offset,omitempty"`
+	OutputPDFOrientation *string           `json:"output_pdf_orientation,omitempty" yaml:"output_pdf_orientation,omitempty" bson:"output_pdf_orientation,omitempty"`
+	PaginationConfig     *PaginationConfig `json:"pagination_config,omitempty" yaml:"pagination_config,omitempty" bson:"pagination_config,omitempty"`
 
 	// logging
 	LogFolder *string         `json:"log_folder,omitempty" yaml:"log_folder,omitempty" bson:"log_folder,omitempty"`

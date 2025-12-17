@@ -27,6 +27,7 @@ type ExcelPagingConfig struct {
 func DefaultExcelPagingConfig() ExcelPagingConfig {
 	return ExcelPagingConfig{
 		RowsPerPage:       50,
+		ReportTitle:       "Paginated Report",
 		TotalRecordsLabel: "Total Records Found",
 		ShowColumnNumbers: false,
 		ShowSubtotals:     false,
@@ -152,7 +153,7 @@ func (p *ExcelPagingPrinter) printHorizontalSelection(r Report, doc *enigma.Doc,
 		return nil, util.Error("CoordinatesToCellName", err)
 	}
 	excel.SetCellStr(sheet, titleCellName, "Current Selection")
-	boldStyle := &excelize.Style{Font: &excelize.Font{Bold: true}}
+	boldStyle := &excelize.Style{Font: &excelize.Font{Bold: true}, Border: []excelize.Border{{Type: "bottom", Color: "000000", Style: 1}}}
 	styleId, _ := excel.NewStyle(boldStyle)
 	excel.SetCellStyle(sheet, titleCellName, titleCellName, styleId)
 
@@ -322,7 +323,7 @@ func (p *ExcelPagingPrinter) printTableHeader(layout *engine.ObjectLayoutEx, she
 
 	DimCnt := len(layout.HyperCube.DimensionInfo)
 	ColumnOrder := layout.HyperCube.ColumnOrder
-	if ColumnOrder == nil || len(ColumnOrder) == 0 {
+	if len(ColumnOrder) == 0 {
 		ColumnOrder = make([]int, len(layout.HyperCube.EffectiveInterColumnSortOrder))
 		for i := range layout.HyperCube.EffectiveInterColumnSortOrder {
 			ColumnOrder[i] = i
@@ -645,9 +646,16 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 		return util.MsgError("Print", "invalid report")
 	}
 
-	// Override report name with title if set
-	if p.Config.ReportTitle != "" {
-		r.Name = &p.Config.ReportTitle
+	if r.Name != nil {
+		p.Config.ReportTitle = *r.Name
+	}
+	if r.PaginationConfig != nil {
+		if r.PaginationConfig.RowsPerPage > 0 {
+			p.Config.RowsPerPage = r.PaginationConfig.RowsPerPage
+		}
+		if r.PaginationConfig.TotalRecordsLabel != "" {
+			p.Config.TotalRecordsLabel = r.PaginationConfig.TotalRecordsLabel
+		}
 	}
 
 	rResult, res := NewReportResult(r)
@@ -707,7 +715,7 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 	// Build cube2report mapping first (need column count for row conversion)
 	DimCnt := len(objLayout.HyperCube.DimensionInfo)
 	ColumnOrder := objLayout.HyperCube.ColumnOrder
-	if ColumnOrder == nil || len(ColumnOrder) == 0 {
+	if len(ColumnOrder) == 0 {
 		ColumnOrder = make([]int, len(objLayout.HyperCube.EffectiveInterColumnSortOrder))
 		for i := range objLayout.HyperCube.EffectiveInterColumnSortOrder {
 			ColumnOrder[i] = i
