@@ -99,6 +99,10 @@ func TestExcelPagingPrinter_PrintReportTitle(t *testing.T) {
 	excel.NewSheet(sheetName)
 	logger := loggers.CoreDebugLogger
 
+	// Initialize execution context
+	printer.excel = excel
+	printer.logger = logger
+
 	tests := []struct {
 		name           string
 		title          string
@@ -111,7 +115,7 @@ func TestExcelPagingPrinter_PrintReportTitle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rect := enigma.Rect{Top: 1, Left: 1}
-			resRect, res := printer.printReportTitle(tt.title, sheetName, excel, rect, logger)
+			resRect, res := printer.printReportTitle(tt.title, sheetName, rect)
 
 			if res != nil {
 				t.Fatalf("unexpected error: %v", res)
@@ -143,10 +147,14 @@ func TestExcelPagingPrinter_PrintTotalRecords(t *testing.T) {
 	excel.NewSheet(sheetName)
 	logger := loggers.CoreDebugLogger
 
+	// Initialize execution context
+	printer.excel = excel
+	printer.logger = logger
+
 	rect := enigma.Rect{Top: 1, Left: 1}
 	totalRows := 150
 
-	resRect, res := printer.printTotalRecords(totalRows, sheetName, excel, rect, logger)
+	resRect, res := printer.printTotalRecords(totalRows, sheetName, rect)
 
 	if res != nil {
 		t.Fatalf("unexpected error: %v", res)
@@ -181,10 +189,14 @@ func TestExcelPagingPrinter_PrintColumnNumbers(t *testing.T) {
 	excel.NewSheet(sheetName)
 	logger := loggers.CoreDebugLogger
 
+	// Initialize execution context
+	printer.excel = excel
+	printer.logger = logger
+
 	rect := enigma.Rect{Top: 1, Left: 1}
 	colCount := 5
 
-	resRect, res := printer.printColumnNumbers(colCount, sheetName, excel, rect, logger)
+	resRect, res := printer.printColumnNumbers(colCount, sheetName, rect)
 
 	if res != nil {
 		t.Fatalf("unexpected error: %v", res)
@@ -218,12 +230,16 @@ func TestExcelPagingPrinter_PrintPageSubtotals(t *testing.T) {
 	excel.NewSheet(sheetName)
 	logger := loggers.CoreDebugLogger
 
+	// Initialize execution context
+	printer.excel = excel
+	printer.logger = logger
+	printer.report = Report{AllBorders: false}
+
 	rect := enigma.Rect{Top: 1, Left: 1}
 	subtotals := []float64{0, 100.5, 200.25, 0}
 	isNumeric := []bool{false, true, true, false}
-	r := Report{AllBorders: false}
 
-	resRect, res := printer.printPageSubtotals(subtotals, isNumeric, sheetName, excel, rect, r, logger)
+	resRect, res := printer.printPageSubtotals(subtotals, isNumeric, sheetName, rect)
 
 	if res != nil {
 		t.Fatalf("unexpected error: %v", res)
