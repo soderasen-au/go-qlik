@@ -90,22 +90,25 @@ type CustomHeader struct {
 }
 
 type ColumnHeaderFormat struct {
-	Order        int    `json:"order"`
-	Label        string `json:"label"`
-	Bold         bool   `json:"bold"`
-	FgColor      string `json:"fg_color"`
-	BgColor      string `json:"bg_color"`
-	NumFmt       string `json:"num_fmt"`
-	DateFmt      string `json:"date_fmt"`
-	ColumnType   string `json:"column_type,omitempty"`
-	StaticValue  string `json:"static_value"`
-	TableName    string `json:"table_name"`
-	SrcFieldName string `json:"src_field_name"`
+	Order        int     `json:"order"`
+	Label        string  `json:"label"`
+	Bold         bool    `json:"bold"`
+	FgColor      string  `json:"fg_color"`
+	BgColor      string  `json:"bg_color"`
+	NumFmt       string  `json:"num_fmt"`
+	DateFmt      string  `json:"date_fmt"`
+	ColumnType   string  `json:"column_type,omitempty"`
+	StaticValue  string  `json:"static_value"`
+	TableName    string  `json:"table_name"`
+	SrcFieldName string  `json:"src_field_name"`
+	Width        float64 `json:"width,omitempty"`
 }
 
 type PaginationConfig struct {
 	RowsPerPage       int    `json:"rows_per_page,omitempty" yaml:"rows_per_page,omitempty" bson:"rows_per_page,omitempty"`
 	TotalRecordsLabel string `json:"total_records_label" yaml:"total_records_label" bson:"total_records_label"`
+	ShowColumnNumbers bool   `json:"show_column_numbers" yaml:"show_column_numbers"`
+	ShowSubtotals     bool   `json:"show_subtotals" yaml:"show_subtotals"`
 }
 
 // user has to apply any needed selection before printing report

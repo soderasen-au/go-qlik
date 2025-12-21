@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/rs/zerolog"
@@ -374,6 +375,7 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 		p.layout.ColumnInfos = append(p.layout.ColumnInfos, colInfo)
 		cellText := colInfo.FallbackTitle
 
+		var pHeaderFmt *ColumnHeaderFormat
 		p.cube2report[ColCnt] = ColCnt
 		if p.report.ColumnHeaderFormats != nil {
 			if colHeaderFmt, ok := p.report.ColumnHeaderFormats[cellText]; ok {
@@ -381,6 +383,7 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 				if colHeaderFmt.Label != "" {
 					cellText = colHeaderFmt.Label
 				}
+				pHeaderFmt = &colHeaderFmt
 			}
 		}
 		repIdx := p.cube2report[ColCnt]
@@ -395,10 +398,35 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 		p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
 
 		// Set column width
-		colName, _, _ := excelize.SplitCellName(cellName)
-		w, _ := p.excel.GetColWidth(sheet, colName)
+		colName, _, err := excelize.SplitCellName(cellName)
+		if err != nil {
+			logger.Err(err).Msg("SplitCellName")
+			return nil, util.Error("SplitCellName", err)
+		}
+		glyphCount := utf8.RuneCountInString(cellText)
+		w, err := p.excel.GetColWidth(sheet, colName)
+		if err != nil {
+			logger.Err(err).Msg("GetColWidth")
+			return nil, util.Error("GetColWidth", err)
+		}
 		if w < float64(colInfo.ApprMaxGlyphCount) && colInfo.ApprMaxGlyphCount < 64 {
-			p.excel.SetColWidth(sheet, colName, colName, float64(colInfo.ApprMaxGlyphCount))
+			w = float64(colInfo.ApprMaxGlyphCount)
+		}
+		if glyphCount < 64 && w < float64(glyphCount)+2 {
+			w = float64(glyphCount) + 2
+		}
+		if pHeaderFmt != nil && pHeaderFmt.Width > 0 {
+			w = pHeaderFmt.Width
+			logger.Info().
+				Int("MaxGlyphCount", colInfo.ApprMaxGlyphCount).
+				Int("HeaderGlyphCount", glyphCount).
+				Float64("customHeaderWidth", pHeaderFmt.Width).Float64("Width", w).
+				Msgf("calculate width for column %s: %v", colName, w)
+		}
+		err = p.excel.SetColWidth(sheet, colName, colName, w)
+		if err != nil {
+			logger.Err(err).Msg("SetColWidth")
+			return nil, util.Error("SetColWidth", err)
 		}
 
 		ColCnt++

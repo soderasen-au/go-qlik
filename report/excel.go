@@ -6,6 +6,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/rs/zerolog"
@@ -521,17 +522,22 @@ func (p *ExcelReportPrinter) printObjectHeaderCell(r Report, excel *excelize.Fil
 			cellLogger.Err(err).Msg("SplitCellName")
 			return util.Error("SplitCellName", err)
 		}
+		glyphCount := utf8.RuneCountInString(cellText)
 		w, err := excel.GetColWidth(sheet, colName)
 		if err != nil {
 			cellLogger.Err(err).Msg("GetColWidth")
 			return util.Error("GetColWidth", err)
 		}
 		if w < float64(colInfo.ApprMaxGlyphCount) && colInfo.ApprMaxGlyphCount < 64 {
-			err = excel.SetColWidth(sheet, colName, colName, float64(colInfo.ApprMaxGlyphCount))
-			if err != nil {
-				cellLogger.Err(err).Msg("SetColWidth")
-				return util.Error("SetColWidth", err)
-			}
+			w = float64(colInfo.ApprMaxGlyphCount)
+		}
+		if glyphCount < 64 && w < float64(glyphCount)+2 {
+			w = float64(glyphCount) + 2
+		}
+		err = excel.SetColWidth(sheet, colName, colName, w)
+		if err != nil {
+			cellLogger.Err(err).Msg("SetColWidth")
+			return util.Error("SetColWidth", err)
 		}
 	}
 
@@ -609,17 +615,22 @@ func (p *ExcelReportPrinter) printPivotObjectHeader(sheet string, layout *engine
 			cellLogger.Err(err).Msg("SplitCellName")
 			return nil, util.Error("SplitCellName", err)
 		}
+		glyphCount := utf8.RuneCountInString(colInfo.FallbackTitle)
 		w, err := excel.GetColWidth(sheet, colName)
 		if err != nil {
 			cellLogger.Err(err).Msg("GetColWidth")
 			return nil, util.Error("GetColWidth", err)
 		}
 		if w < float64(colInfo.ApprMaxGlyphCount) && colInfo.ApprMaxGlyphCount < 64 {
-			err = excel.SetColWidth(sheet, colName, colName, float64(colInfo.ApprMaxGlyphCount))
-			if err != nil {
-				cellLogger.Err(err).Msg("SetColWidth")
-				return nil, util.Error("SetColWidth", err)
-			}
+			w = float64(colInfo.ApprMaxGlyphCount)
+		}
+		if glyphCount < 64 && w < float64(glyphCount)+2 {
+			w = float64(glyphCount) + 2
+		}
+		err = excel.SetColWidth(sheet, colName, colName, w)
+		if err != nil {
+			cellLogger.Err(err).Msg("SetColWidth")
+			return nil, util.Error("SetColWidth", err)
 		}
 	}
 
@@ -1294,17 +1305,22 @@ func (p *ExcelReportPrinter) printPivotTopCell(excel *excelize.File, sheet strin
 				cellLogger.Err(err).Msg("SplitCellName")
 				return ret, util.Error("SplitCellName", err)
 			}
-			w, err := excel.GetColWidth(sheet, colName)
+			glyphCount := utf8.RuneCountInString(cell.Text)
+			width, err := excel.GetColWidth(sheet, colName)
 			if err != nil {
 				cellLogger.Err(err).Msg("GetColWidth")
 				return ret, util.Error("GetColWidth", err)
 			}
-			if w < float64(colInfo.ApprMaxGlyphCount) && colInfo.ApprMaxGlyphCount < 64 {
-				err = excel.SetColWidth(sheet, colName, colName, float64(colInfo.ApprMaxGlyphCount))
-				if err != nil {
-					cellLogger.Err(err).Msg("SetColWidth")
-					return ret, util.Error("SetColWidth", err)
-				}
+			if width < float64(colInfo.ApprMaxGlyphCount) && colInfo.ApprMaxGlyphCount < 64 {
+				width = float64(colInfo.ApprMaxGlyphCount)
+			}
+			if glyphCount < 64 && width < float64(glyphCount)+2 {
+				width = float64(glyphCount) + 2
+			}
+			err = excel.SetColWidth(sheet, colName, colName, width)
+			if err != nil {
+				cellLogger.Err(err).Msg("SetColWidth")
+				return ret, util.Error("SetColWidth", err)
 			}
 		}
 
