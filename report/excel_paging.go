@@ -384,6 +384,9 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 					cellText = colHeaderFmt.Label
 				}
 				pHeaderFmt = &colHeaderFmt
+			} else if colHeaderFmt, ok := p.report.ColumnHeaderFormats["__global"]; ok {
+				logger.Info().Msgf("use global header format %v", colHeaderFmt)
+				pHeaderFmt = &colHeaderFmt
 			}
 		}
 		repIdx := p.cube2report[ColCnt]
@@ -395,7 +398,32 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 
 		logger.Debug().Msgf("print header cell[%s]: %s", cellName, cellText)
 		p.excel.SetCellStr(sheet, cellName, cellText)
-		p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
+		if pHeaderFmt != nil {
+			headerStyle := *boldStyle
+			logger.Debug().Msgf("bg color: %s", pHeaderFmt.BgColor)
+			bgColor, res := NewARGBFromQlikColor(pHeaderFmt.BgColor)
+			if res != nil {
+				return nil, res.LogWith(&logger, "NewARGBFrom(BgColor)")
+			}
+			if bgColor != nil {
+				bgColor.AssignBgStyle(&headerStyle)
+			}
+
+			logger.Debug().Msgf("fg color: %s", pHeaderFmt.FgColor)
+			fgColor, res := NewARGBFromQlikColor(pHeaderFmt.FgColor)
+			if res != nil {
+				return nil, res.LogWith(&logger, "NewARGBFrom(FgColor)")
+			}
+			if fgColor != nil {
+				fgColor.AssignFontStyle(&headerStyle)
+			} else if bgColor != nil {
+				bgColor.AssignLuminanceFont(&headerStyle)
+			}
+			headerStyleId, _ := p.excel.NewStyle(&headerStyle)
+			p.excel.SetCellStyle(sheet, cellName, cellName, headerStyleId)
+		} else {
+			p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
+		}
 
 		// Set column width
 		colName, _, err := excelize.SplitCellName(cellName)
