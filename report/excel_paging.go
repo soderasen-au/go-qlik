@@ -690,6 +690,12 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 		if r.PaginationConfig.TotalRecordsLabel != "" {
 			p.Config.TotalRecordsLabel = r.PaginationConfig.TotalRecordsLabel
 		}
+		if r.PaginationConfig.ShowColumnNumbers {
+			p.Config.ShowColumnNumbers = r.PaginationConfig.ShowColumnNumbers
+		}
+		if r.PaginationConfig.ShowSubtotals {
+			p.Config.ShowSubtotals = r.PaginationConfig.ShowSubtotals
+		}
 	}
 
 	rResult, res := NewReportResult(r)
