@@ -13,7 +13,7 @@ import (
 // TestExcelToPDFWin_Basic tests basic conversion with default settings
 func TestExcelToPDFWin_Basic(t *testing.T) {
 	// Skip if no Excel file available
-	testFile := "test/test_report.xlsx"
+	testFile := "test/pdf/TestReport.xlsx"
 	if _, err := os.Stat(testFile); os.IsNotExist(err) {
 		t.Skipf("test file not found: %s", testFile)
 	}
@@ -47,7 +47,7 @@ func TestExcelToPDFWin_Basic(t *testing.T) {
 
 // TestExcelToPDFWin_Portrait tests portrait orientation
 func TestExcelToPDFWin_Portrait(t *testing.T) {
-	testFile := "test/test_report.xlsx"
+	testFile := "test/pdf/TestReport.xlsx"
 	if _, err := os.Stat(testFile); os.IsNotExist(err) {
 		t.Skipf("test file not found: %s", testFile)
 	}
@@ -81,7 +81,7 @@ func TestExcelToPDFWin_Portrait(t *testing.T) {
 
 // TestExcelToPDFWin_CustomMargins tests custom margin settings
 func TestExcelToPDFWin_CustomMargins(t *testing.T) {
-	testFile := "test/test_report.xlsx"
+	testFile := "test/pdf/TestReport.xlsx"
 	if _, err := os.Stat(testFile); os.IsNotExist(err) {
 		t.Skipf("test file not found: %s", testFile)
 	}
@@ -118,7 +118,7 @@ func TestExcelToPDFWin_CustomMargins(t *testing.T) {
 
 // TestExcelToPDFWin_MultipleSheets tests exporting multiple sheets to separate PDFs
 func TestExcelToPDFWin_MultipleSheets(t *testing.T) {
-	testFile := "test/test_report.xlsx"
+	testFile := "test/pdf/TestReport.xlsx"
 	if _, err := os.Stat(testFile); os.IsNotExist(err) {
 		t.Skipf("test file not found: %s", testFile)
 	}
@@ -165,7 +165,7 @@ func TestExcelToPDFWin_MultipleSheets(t *testing.T) {
 
 // TestExcelToPDFWin_SpecificSheets tests exporting specific sheets by name
 func TestExcelToPDFWin_SpecificSheets(t *testing.T) {
-	testFile := "test/test_report.xlsx"
+	testFile := "test/pdf/TestReport.xlsx"
 	if _, err := os.Stat(testFile); os.IsNotExist(err) {
 		t.Skipf("test file not found: %s", testFile)
 	}
@@ -200,7 +200,7 @@ func TestExcelToPDFWin_SpecificSheets(t *testing.T) {
 
 // TestExcelToPDFWin_PrintArea tests setting a custom print area
 func TestExcelToPDFWin_PrintArea(t *testing.T) {
-	testFile := "test/test_report.xlsx"
+	testFile := "test/pdf/TestReport.xlsx"
 	if _, err := os.Stat(testFile); os.IsNotExist(err) {
 		t.Skipf("test file not found: %s", testFile)
 	}

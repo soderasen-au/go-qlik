@@ -426,10 +426,6 @@ func (e *ExcelToPDFWin) exportSinglePDF(sheets []sheetInfo) *util.Result {
 		absOutputPath,                  // Filename
 		xlQualityStandard,              // Quality
 		e.config.IncludeDocProperties,  // IncludeDocProperties
-		false,                          // IgnorePrintAreas
-		nil,                            // From (nil = all)
-		nil,                            // To (nil = all)
-		e.config.OpenAfterPublish,      // OpenAfterPublish
 	); err != nil {
 		logger.Err(err).Msg("ExportAsFixedFormat failed")
 		return util.Error("ExportAsFixedFormat", err)
@@ -479,10 +475,6 @@ func (e *ExcelToPDFWin) exportMultiplePDFs(sheets []sheetInfo) *util.Result {
 			absOutputPath,                  // Filename
 			xlQualityStandard,              // Quality
 			e.config.IncludeDocProperties,  // IncludeDocProperties
-			false,                          // IgnorePrintAreas
-			nil,                            // From
-			nil,                            // To
-			false,                          // OpenAfterPublish (never open intermediate PDFs)
 		); err != nil {
 			sheetLogger.Err(err).Msg("ExportAsFixedFormat failed")
 			return util.Error("ExportAsFixedFormat", err)
