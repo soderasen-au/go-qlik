@@ -109,6 +109,7 @@ type PaginationConfig struct {
 	TotalRecordsLabel string `json:"total_records_label" yaml:"total_records_label" bson:"total_records_label"`
 	ShowColumnNumbers bool   `json:"show_column_numbers" yaml:"show_column_numbers"`
 	ShowSubtotals     bool   `json:"show_subtotals" yaml:"show_subtotals"`
+	ConverToPDF       bool   `json:"convert_to_pdf" yaml:"convert_to_pdf" bson:"convert_to_pdf"`
 }
 
 // user has to apply any needed selection before printing report

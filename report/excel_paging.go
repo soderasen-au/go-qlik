@@ -3,6 +3,7 @@ package report
 import (
 	"fmt"
 	"math"
+	"path/filepath"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -730,7 +731,6 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 	if res != nil {
 		return res.With("NewReportResult")
 	}
-	p.ReportResults[util.MaybeNil(r.ID)] = rResult
 	logger := rResult.Logger.With().Str("report", *r.ID).Str("driver", "excel_paging").Logger()
 
 	if r.Doc == nil {
@@ -904,6 +904,42 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 	}
 	logger.Info().Msgf("report saved as [%s]", *rResult.ReportFile)
 
+	if r.PaginationConfig != nil && r.PaginationConfig.ConverToPDF {
+		res := p.convertExcelToPDF(rResult)
+		if res != nil {
+			return res.With("ConvertExcelToPDF")
+		}
+	}
+	// Store report result
+	p.ReportResults[util.MaybeNil(r.ID)] = rResult
+	return nil
+}
+
+func (p *ExcelPagingPrinter) convertExcelToPDF(rResult *ReportResult) *util.Result {
+	logger := rResult.Logger.With().Str("report", rResult.ID).Str("driver", "excel_to_pdf").Logger()
+	logger.Info().Msgf("converting excel to pdf: %s", *rResult.ReportFile)
+
+	// Convert to PDF
+	xlsxPath := *rResult.ReportFile
+	ext := filepath.Ext(xlsxPath)
+	stem := xlsxPath[:len(xlsxPath)-len(ext)]
+	pdfFilePath := stem + ".pdf"
+	excel2PDFConfig := ExcelToPDFWinConfig{
+		InputExcelPath: *rResult.ReportFile,
+		OutputPDFPath:  pdfFilePath,
+	}
+
+	converter, res := NewExcelToPDFWin(excel2PDFConfig)
+	if res != nil {
+		return res.With("NewExcelToPDFWin")
+	}
+	if res := converter.Convert(); res != nil {
+		return res.With("ExcelToPDFWin.Convert")
+	}
+	logger.Info().Msgf("converted excel to pdf: %s", pdfFilePath)
+
+	// Update report result
+	rResult.ReportFile = &pdfFilePath
 	return nil
 }
 
