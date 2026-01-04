@@ -24,6 +24,12 @@ type ExcelReportPrinter struct {
 	ReportPrinterBase
 }
 
+type genericContainerChildItem struct {
+	ID    string
+	Label string
+	Info  *engine.ContainerChildInfo
+}
+
 type CellPos struct {
 	CubeRowIx     int
 	CubeColIx     int
@@ -834,18 +840,62 @@ func (p *ExcelReportPrinter) printContainer(doc *enigma.Doc, r Report, objId str
 		})
 	}
 
+	isTabbed := objLayout.Info.Type == "sn-tabbed-container"
+
+	childMap := make(map[string]*engine.ContainerChildItem)
+	for _, child := range childArray {
+		if child.Info.ContainerChildId != "" {
+			childMap[child.Info.ContainerChildId] = child
+		}
+		if child.Info.QExtendsId != "" {
+			childMap[child.Info.QExtendsId] = child
+		}
+	}
+
+	children := make([]*genericContainerChildItem, 0)
+	if isTabbed {
+		for _, child := range childArray {
+			children = append(children, &genericContainerChildItem{
+				ID:    child.Entry.Info.Id,
+				Label: child.Info.Title,
+				Info:  child.Info,
+			})
+		}
+	} else {
+		for ci, child := range objLayout.Children {
+			clogger := _logger.With().Int("child", ci).Str("Id", child.Id).Str("refId", child.RefId).Logger()
+			citem, ok := childMap[child.RefId]
+			if !ok {
+				errmsg := fmt.Sprintf("can't find child[%d] %s's refId[%s] in child list", ci, child.Id, child.RefId)
+				clogger.Error().Msg(errmsg)
+				return nil, util.MsgError("LookupChildList", errmsg)
+			}
+			children = append(children, &genericContainerChildItem{
+				ID:    citem.Entry.Info.Id,
+				Label: child.Label,
+				Info:  nil,
+			})
+		}
+	}
+
 	childResRect := rect
 	resRect := rect
 	resRect.Width = 0
-	for ci, child := range objLayout.Children {
-		clogger := _logger.With().Int("child", ci).Str("Id", child.Id).Str("refId", child.RefId).Logger()
+	for ci, child := range children {
+		clogger := _logger.With().Int("child", ci).Str("Id", child.ID).Logger()
+		if isTabbed && child.Info != nil {
+			if !shouldShowChild(doc, child.Info, &clogger) {
+				clogger.Debug().Msg("skip tab by showCondition")
+				continue
+			}
+		}
 		childOffset := enigma.Rect{Top: childResRect.Top + childResRect.Height, Left: childResRect.Left, Width: 0, Height: 0}
 		if ci > 0 {
 			childOffset.Top += 3
 		}
 
-		if len(objLayout.Children[ci].Label) > 0 {
-			cLabel := objLayout.Children[ci].Label
+		if len(child.Label) > 0 {
+			cLabel := child.Label
 			boldFont := &excelize.Style{
 				Font: &excelize.Font{
 					Bold: true,
@@ -872,20 +922,7 @@ func (p *ExcelReportPrinter) printContainer(doc *enigma.Doc, r Report, objId str
 			}
 		}
 
-		clogger.Debug().Msg("try to find in child map")
-		childID := ""
-		for _, c := range childArray {
-			if child.RefId == c.Info.ContainerChildId || child.RefId == c.Info.QExtendsId {
-				childID = c.Entry.Info.Id
-			}
-		}
-		if childID == "" {
-			errmsg := fmt.Sprintf("can't find child[%d] %s's refId[%s] in child list", ci, child.Id, child.RefId)
-			clogger.Error().Msg(errmsg)
-			return nil, util.MsgError("LookupChildList", errmsg)
-		}
-
-		childResRectPtr, res := p.printObject(doc, r, childID, *sheetName, childOffset, excel, &clogger)
+		childResRectPtr, res := p.printObject(doc, r, child.ID, *sheetName, childOffset, excel, &clogger)
 		if res != nil {
 			clogger.Err(res).Msg("PrintChildObject")
 			return nil, res.With("PrintChildObject")
@@ -898,6 +935,23 @@ func (p *ExcelReportPrinter) printContainer(doc *enigma.Doc, r Report, objId str
 
 	resRect.Height = childResRect.Top + childResRect.Height - rect.Top
 	return &resRect, nil
+}
+
+// for sn-tabbed container, evaluate showCondition
+func shouldShowChild(doc *enigma.Doc, info *engine.ContainerChildInfo, logger *zerolog.Logger) bool {
+	if strings.TrimSpace(info.ShowCondition) == "" {
+		return true
+	}
+	dual, err := doc.EvaluateEx(engine.ConnCtx, info.ShowCondition)
+	if err != nil {
+		logger.Warn().Err(err).Msg("EvaluateEx showCondition failed, default show")
+		return true
+	}
+	if dual.IsNumeric {
+		return dual.Number != 0
+	}
+	txt := strings.ToLower(strings.TrimSpace(dual.Text))
+	return txt != "" && txt != "false" && txt != "0"
 }
 
 // rect [in] rect.Top, rect.Left set the start offset posistion of the table;
@@ -1578,7 +1632,7 @@ func (p *ExcelReportPrinter) printObject(doc *enigma.Doc, r Report, objId, useSh
 		return nil, res.With("GetObjectLayoutEx")
 	}
 
-	if objLayout.Info.Type == "container" {
+	if objLayout.Info.Type == "container" || objLayout.Info.Type == "sn-tabbed-container" {
 		return p.printContainer(doc, r, objId, obj, objLayout, rect, excel, _logger)
 	}
 
