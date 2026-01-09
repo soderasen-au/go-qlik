@@ -1,6 +1,7 @@
 package report
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -594,11 +595,14 @@ func (p *ExcelPagingPrinter) printTableRows(rows [][]*enigma.NxCell, sheet strin
 
 // printPage prints a single page with all sections
 func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, totalRows int) *util.Result {
-
 	sheetName := fmt.Sprintf("page-%d", pageNum)
 	logger := p.logger.With().Str("sheet", sheetName).Int("page", pageNum).Logger()
 
-	p.excel.NewSheet(sheetName)
+	_, err := p.excel.NewSheet(sheetName)
+	if err != nil {
+		logger.Err(err).Msg("NewSheet")
+		return util.Error("NewSheet", err)
+	}
 
 	currentRow := 1
 	colCount := len(p.layout.ColumnInfos)
@@ -697,6 +701,18 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 		if res != nil {
 			return res.With("printPageSubtotals")
 		}
+	}
+
+	// 9. Set print parameters
+	pageOpts := &excelize.PageLayoutOptions{
+		Size:        util.Ptr(9), // A4
+		Orientation: util.Ptr("landscape"),
+		FitToWidth:  util.Ptr(1),
+	}
+	err = p.excel.SetPageLayout(sheetName, pageOpts)
+	if err != nil {
+		logger.Err(err).Msg("SetPageLayoutOptions")
+		return util.Error("SetPageLayoutOptions", err)
 	}
 
 	logger.Info().Msgf("page %d printed with %d rows", pageNum, len(rows))
@@ -897,7 +913,9 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 	}
 
 	// Remove default sheet and save
-	p.excel.DeleteSheet("Sheet1")
+	if err := p.excel.DeleteSheet("Sheet1"); err != nil {
+		logger.Warn().Msgf("DeleteSheet Sheet1: %v", err)
+	}
 
 	if err := p.excel.SaveAs(*rResult.ReportFile); err != nil {
 		return util.Error("SaveWorkBook", err)
@@ -924,16 +942,15 @@ func (p *ExcelPagingPrinter) convertExcelToPDF(rResult *ReportResult) *util.Resu
 	ext := filepath.Ext(xlsxPath)
 	stem := xlsxPath[:len(xlsxPath)-len(ext)]
 	pdfFilePath := stem + ".pdf"
-	excel2PDFConfig := ExcelToPDFWinConfig{
+	excel2PDFConfig := ExcelToPDFTaskConfig{
 		InputExcelPath: *rResult.ReportFile,
 		OutputPDFPath:  pdfFilePath,
+		Logger:         &logger,
 	}
 
-	converter, res := NewExcelToPDFWin(excel2PDFConfig)
-	if res != nil {
-		return res.With("NewExcelToPDFWin")
-	}
-	if res := converter.Convert(); res != nil {
+	ctx := context.Background()
+	converter := NewLibreExcel2PDF("", &logger, 4) // no worries, it uses global instance anyway
+	if res := converter.Convert(ctx, excel2PDFConfig); res != nil {
 		return res.With("ExcelToPDFWin.Convert")
 	}
 	logger.Info().Msgf("converted excel to pdf: %s", pdfFilePath)

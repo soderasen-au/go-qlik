@@ -15,12 +15,12 @@ import (
 // Excel constants for COM automation
 const (
 	// PageSetup constants
-	xlPaperA4       = 9  // A4 paper (210mm x 297mm)
-	xlLandscape     = 2  // Landscape orientation
-	xlPortrait      = 1  // Portrait orientation
+	xlPaperA4   = 9 // A4 paper (210mm x 297mm)
+	xlLandscape = 2 // Landscape orientation
+	xlPortrait  = 1 // Portrait orientation
 
 	// Export format
-	xlTypePDF       = 0  // PDF file format
+	xlTypePDF = 0 // PDF file format
 
 	// Quality
 	xlQualityStandard = 0
@@ -29,36 +29,36 @@ const (
 // ExcelToPDFWinConfig holds configuration for Excel-to-PDF conversion
 type ExcelToPDFWinConfig struct {
 	// Input/Output
-	InputExcelPath   string  `json:"input_excel_path" yaml:"input_excel_path" bson:"input_excel_path"`       // Path to input Excel file
-	OutputPDFPath    string  `json:"output_pdf_path" yaml:"output_pdf_path" bson:"output_pdf_path"`          // Path to output PDF file (for single sheet) or directory (for multiple sheets)
-	Password         string  `json:"password,omitempty" yaml:"password,omitempty" bson:"password,omitempty"` // Password for protected Excel files (optional)
+	InputExcelPath string `json:"input_excel_path" yaml:"input_excel_path" bson:"input_excel_path"`       // Path to input Excel file
+	OutputPDFPath  string `json:"output_pdf_path" yaml:"output_pdf_path" bson:"output_pdf_path"`          // Path to output PDF file (for single sheet) or directory (for multiple sheets)
+	Password       string `json:"password,omitempty" yaml:"password,omitempty" bson:"password,omitempty"` // Password for protected Excel files (optional)
 
 	// Sheet selection
-	SheetNames       []string `json:"sheet_names,omitempty" yaml:"sheet_names,omitempty" bson:"sheet_names,omitempty"`       // Specific sheet names to export (empty = all sheets)
-	SheetIndices     []int    `json:"sheet_indices,omitempty" yaml:"sheet_indices,omitempty" bson:"sheet_indices,omitempty"` // Specific sheet indices to export (1-based, empty = all sheets)
+	SheetNames   []string `json:"sheet_names,omitempty" yaml:"sheet_names,omitempty" bson:"sheet_names,omitempty"`       // Specific sheet names to export (empty = all sheets)
+	SheetIndices []int    `json:"sheet_indices,omitempty" yaml:"sheet_indices,omitempty" bson:"sheet_indices,omitempty"` // Specific sheet indices to export (1-based, empty = all sheets)
 
 	// Page setup
-	PaperSize        int     `json:"paper_size,omitempty" yaml:"paper_size,omitempty" bson:"paper_size,omitempty"`          // Excel paper size constant (default: xlPaperA4)
-	Orientation      int     `json:"orientation,omitempty" yaml:"orientation,omitempty" bson:"orientation,omitempty"`       // Excel orientation constant (default: xlLandscape)
-	FitToWidth       int     `json:"fit_to_width,omitempty" yaml:"fit_to_width,omitempty" bson:"fit_to_width,omitempty"`    // Fit to N pages wide (0 = no fit, 1 = fit to 1 page wide)
-	FitToHeight      int     `json:"fit_to_height,omitempty" yaml:"fit_to_height,omitempty" bson:"fit_to_height,omitempty"` // Fit to N pages tall (0 = no fit)
+	PaperSize   int `json:"paper_size,omitempty" yaml:"paper_size,omitempty" bson:"paper_size,omitempty"`          // Excel paper size constant (default: xlPaperA4)
+	Orientation int `json:"orientation,omitempty" yaml:"orientation,omitempty" bson:"orientation,omitempty"`       // Excel orientation constant (default: xlLandscape)
+	FitToWidth  int `json:"fit_to_width,omitempty" yaml:"fit_to_width,omitempty" bson:"fit_to_width,omitempty"`    // Fit to N pages wide (0 = no fit, 1 = fit to 1 page wide)
+	FitToHeight int `json:"fit_to_height,omitempty" yaml:"fit_to_height,omitempty" bson:"fit_to_height,omitempty"` // Fit to N pages tall (0 = no fit)
 
 	// Margins (in inches, Excel default: 0.75)
-	LeftMargin       float64 `json:"left_margin,omitempty" yaml:"left_margin,omitempty" bson:"left_margin,omitempty"`       // Left margin in inches
-	RightMargin      float64 `json:"right_margin,omitempty" yaml:"right_margin,omitempty" bson:"right_margin,omitempty"`    // Right margin in inches
-	TopMargin        float64 `json:"top_margin,omitempty" yaml:"top_margin,omitempty" bson:"top_margin,omitempty"`          // Top margin in inches
-	BottomMargin     float64 `json:"bottom_margin,omitempty" yaml:"bottom_margin,omitempty" bson:"bottom_margin,omitempty"` // Bottom margin in inches
+	LeftMargin   float64 `json:"left_margin,omitempty" yaml:"left_margin,omitempty" bson:"left_margin,omitempty"`       // Left margin in inches
+	RightMargin  float64 `json:"right_margin,omitempty" yaml:"right_margin,omitempty" bson:"right_margin,omitempty"`    // Right margin in inches
+	TopMargin    float64 `json:"top_margin,omitempty" yaml:"top_margin,omitempty" bson:"top_margin,omitempty"`          // Top margin in inches
+	BottomMargin float64 `json:"bottom_margin,omitempty" yaml:"bottom_margin,omitempty" bson:"bottom_margin,omitempty"` // Bottom margin in inches
 
 	// Print area (optional)
-	PrintArea        string  `json:"print_area,omitempty" yaml:"print_area,omitempty" bson:"print_area,omitempty"` // Excel range notation (e.g., "A1:Z100"), empty = use default
+	PrintArea string `json:"print_area,omitempty" yaml:"print_area,omitempty" bson:"print_area,omitempty"` // Excel range notation (e.g., "A1:Z100"), empty = use default
 
 	// Export options
-	ExportMultiplePDFs bool  `json:"export_multiple_pdfs,omitempty" yaml:"export_multiple_pdfs,omitempty" bson:"export_multiple_pdfs,omitempty"` // If true, export one PDF per sheet (OutputPDFPath becomes directory)
+	ExportMultiplePDFs   bool `json:"export_multiple_pdfs,omitempty" yaml:"export_multiple_pdfs,omitempty" bson:"export_multiple_pdfs,omitempty"`       // If true, export one PDF per sheet (OutputPDFPath becomes directory)
 	IncludeDocProperties bool `json:"include_doc_properties,omitempty" yaml:"include_doc_properties,omitempty" bson:"include_doc_properties,omitempty"` // Include Excel document properties in PDF
-	OpenAfterPublish   bool  `json:"open_after_publish,omitempty" yaml:"open_after_publish,omitempty" bson:"open_after_publish,omitempty"`       // Open PDF after export (default: false)
+	OpenAfterPublish     bool `json:"open_after_publish,omitempty" yaml:"open_after_publish,omitempty" bson:"open_after_publish,omitempty"`             // Open PDF after export (default: false)
 
 	// Logger
-	Logger           *zerolog.Logger `json:"-" yaml:"-" bson:"-"`
+	Logger *zerolog.Logger `json:"-" yaml:"-" bson:"-"`
 }
 
 // SetDefaults applies sensible defaults to unset config values
@@ -422,10 +422,10 @@ func (e *ExcelToPDFWin) exportSinglePDF(sheets []sheetInfo) *util.Result {
 	// Export workbook to PDF
 	logger.Info().Msgf("exporting to: %s", absOutputPath)
 	if _, err := oleutil.CallMethod(e.workbook, "ExportAsFixedFormat",
-		xlTypePDF,                      // Type
-		absOutputPath,                  // Filename
-		xlQualityStandard,              // Quality
-		e.config.IncludeDocProperties,  // IncludeDocProperties
+		xlTypePDF,                     // Type
+		absOutputPath,                 // Filename
+		xlQualityStandard,             // Quality
+		e.config.IncludeDocProperties, // IncludeDocProperties
 	); err != nil {
 		logger.Err(err).Msg("ExportAsFixedFormat failed")
 		return util.Error("ExportAsFixedFormat", err)
@@ -471,10 +471,10 @@ func (e *ExcelToPDFWin) exportMultiplePDFs(sheets []sheetInfo) *util.Result {
 		// Export sheet to PDF
 		sheetLogger.Info().Msgf("exporting to: %s", absOutputPath)
 		if _, err := oleutil.CallMethod(sheet.Sheet, "ExportAsFixedFormat",
-			xlTypePDF,                      // Type
-			absOutputPath,                  // Filename
-			xlQualityStandard,              // Quality
-			e.config.IncludeDocProperties,  // IncludeDocProperties
+			xlTypePDF,                     // Type
+			absOutputPath,                 // Filename
+			xlQualityStandard,             // Quality
+			e.config.IncludeDocProperties, // IncludeDocProperties
 		); err != nil {
 			sheetLogger.Err(err).Msg("ExportAsFixedFormat failed")
 			return util.Error("ExportAsFixedFormat", err)

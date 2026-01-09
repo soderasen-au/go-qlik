@@ -1,4 +1,4 @@
-.PHONY: all build build-jwt build-pdfprinter build-excel-paging test clean deps deps-python fmt vet lint help test-pdf compare-pdf test-pivot compare-pivot test-excel-paging compare-excel-paging
+.PHONY: all build build-jwt build-pdfprinter build-excel-paging build-excel-to-pdf-libre test clean deps deps-python fmt vet lint help test-pdf compare-pdf test-pivot compare-pivot test-excel-paging compare-excel-paging test-excel-to-pdf-libre
 
 # Python interpreter (use virtual environment if available)
 PYTHON := $(shell if [ -f .venv/bin/python3 ]; then echo .venv/bin/python3; else echo python3; fi)
@@ -7,7 +7,7 @@ PYTHON := $(shell if [ -f .venv/bin/python3 ]; then echo .venv/bin/python3; else
 all: deps fmt vet build test
 
 # Build all binaries
-build: build-jwt build-pdfprinter build-excel-paging
+build: build-jwt build-pdfprinter build-excel-paging build-excel-to-pdf-libre
 
 # Build JWT encoder/decoder tool
 build-jwt:
@@ -23,6 +23,11 @@ build-pdfprinter:
 build-excel-paging:
 	@echo "Building Excel paging printer..."
 	@go build -o bin/excel_paging ./test/excel_paging
+
+# Build Excel to PDF (LibreOffice) tool
+build-excel-to-pdf-libre:
+	@echo "Building Excel to PDF (LibreOffice) tool..."
+	@go build -tags '!windows' -o bin/excel_to_pdf_libre ./test/excel_to_pdf_libre
 
 # Run all tests
 test:
@@ -87,8 +92,8 @@ compare-pdf: test-pdf deps-python
 test-excel-paging: build-excel-paging
 	@echo "Generating paginated Excel report..."
 	@mkdir -p test-reports
-	@echo "  - Generating paginated report with 100 rows per page..."
-	@./bin/excel_paging -rows-per-page 100 -title "Paginated Sales Report" \
+	@echo "  - Generating paginated report with 10 rows per page..."
+	@./bin/excel_paging -rows-per-page 10 -title "TestPaginatedReport" \
 		-show-col-nums -show-subtotals -all-borders \
 		-name "TestPaginatedReport" -output-folder test-reports \
 		-certs-path test/certs/sa-win2k25
@@ -150,6 +155,25 @@ compare-pivot: test-pivot
 	else \
 		echo "⚠️  Tools not found. Install: brew install poppler (pdftotext) and libreoffice"; \
 	fi
+
+# Test Excel to PDF conversion using LibreOffice
+test-excel-to-pdf-libre: build-excel-to-pdf-libre test-excel-paging
+	@echo "Testing Excel to PDF conversion (LibreOffice)..."
+	@mkdir -p test-reports
+	@if ! command -v libreoffice >/dev/null 2>&1; then \
+		echo "❌ LibreOffice not found. Install it first:"; \
+		echo "  macOS:  brew install --cask libreoffice"; \
+		echo "  Linux:  sudo apt-get install libreoffice (Debian/Ubuntu)"; \
+		echo "          sudo yum install libreoffice (RHEL/CentOS)"; \
+		exit 1; \
+	fi
+	@echo "  - Converting TestReport.xlsx to PDF using LibreOffice..."
+	@./bin/excel_to_pdf_libre \
+		-input test-reports/TestPaginatedReport.xlsx \
+		-output test-reports/TestReport_libre.pdf \
+		-timeout 60
+	@echo "✓ LibreOffice conversion complete"
+	@ls -lh test-reports/TestReport_libre.pdf
 
 # Run tests with coverage
 test-coverage:
@@ -217,10 +241,11 @@ install: build
 help:
 	@echo "Available targets:"
 	@echo "  all                - Run deps, fmt, vet, build, and test (default)"
-	@echo "  build              - Build all binaries (jwt, pdfprinter, excel_paging)"
+	@echo "  build              - Build all binaries (jwt, pdfprinter, excel_paging, excel_to_pdf_libre)"
 	@echo "  build-jwt          - Build JWT tool only"
 	@echo "  build-pdfprinter   - Build PDF printer only"
 	@echo "  build-excel-paging - Build Excel paging printer only"
+	@echo "  build-excel-to-pdf-libre - Build Excel to PDF (LibreOffice) tool"
 	@echo "  test               - Run all tests"
 	@echo "  test-engine        - Run engine package tests"
 	@echo "  test-qrs           - Run QRS package tests"
@@ -230,6 +255,9 @@ help:
 	@echo "  test-excel-paging  - Generate paginated Excel report with multiple sheets"
 	@echo "                       Each sheet contains rows_per_page rows with headers,"
 	@echo "                       selections, column numbers, and page subtotals"
+	@echo "  test-excel-to-pdf-libre - Test Excel to PDF conversion using LibreOffice"
+	@echo "                       (requires: libreoffice)"
+	@echo "                       Install: brew install --cask libreoffice (macOS)"
 	@echo "  compare-excel-paging - Generate paginated Excel and compare with reference"
 	@echo "                       (requires: python3, openpyxl)"
 	@echo "                       Install: pip install openpyxl"

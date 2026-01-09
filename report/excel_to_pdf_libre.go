@@ -1,0 +1,353 @@
+package report
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sync"
+
+	"github.com/rs/zerolog"
+	"github.com/soderasen-au/go-common/util"
+)
+
+// ExcelToPDFTaskConfig holds configuration for a single Excel-to-PDF conversion task
+type ExcelToPDFTaskConfig struct {
+	// Input/Output
+	InputExcelPath string `json:"input_excel_path" yaml:"input_excel_path" bson:"input_excel_path"` // Path to input Excel file
+	OutputPDFPath  string `json:"output_pdf_path" yaml:"output_pdf_path" bson:"output_pdf_path"`    // Path to output PDF file
+
+	// Sheet selection (subset of Windows options - LibreOffice converts all sheets)
+	// Note: LibreOffice headless mode converts entire workbook. Sheet-specific export not supported.
+
+	// Export options (limited compared to Windows COM)
+	// Note: Page setup, margins, orientation are embedded in Excel file - LibreOffice respects them
+
+	// Logger
+	Logger *zerolog.Logger `json:"-" yaml:"-" bson:"-"`
+}
+
+// Validate checks configuration validity
+func (c *ExcelToPDFTaskConfig) Validate() *util.Result {
+	if c.InputExcelPath == "" {
+		return util.MsgError("Validate", "InputExcelPath is required")
+	}
+	if c.OutputPDFPath == "" {
+		return util.MsgError("Validate", "OutputPDFPath is required")
+	}
+
+	// Verify input file exists
+	if _, err := os.Stat(c.InputExcelPath); os.IsNotExist(err) {
+		return util.Error("Validate", fmt.Errorf("input file does not exist: %s", c.InputExcelPath))
+	}
+
+	return nil
+}
+
+// LibreExcel2PDF handles cross-platform Excel-to-PDF conversion using LibreOffice
+type LibreExcel2PDF struct {
+	libreOfficeBin string
+	logger         *zerolog.Logger
+	maxConcurrent  int
+
+	// Concurrency control
+	mu        sync.Mutex
+	started   bool
+	taskQueue chan *conversionTask
+	wg        sync.WaitGroup
+	ctx       context.Context
+	cancel    context.CancelFunc
+}
+
+// conversionTask represents a single conversion request
+type conversionTask struct {
+	ctx    context.Context
+	config ExcelToPDFTaskConfig
+	result chan *util.Result
+}
+
+var (
+	globalInstance     *LibreExcel2PDF
+	globalInstanceOnce sync.Once
+	globalInstanceMu   sync.RWMutex
+)
+
+// NewLibreExcel2PDF returns a singleton global instance of LibreOffice-based Excel-to-PDF converter
+// The first call initializes the singleton with the provided parameters
+// Subsequent calls return the same instance (ignoring new parameters)
+func NewLibreExcel2PDF(libreOfficeBin string, logger *zerolog.Logger, maxConcurrent int) *LibreExcel2PDF {
+	globalInstanceOnce.Do(func() {
+		if libreOfficeBin == "" {
+			libreOfficeBin = "libreoffice"
+		}
+
+		if logger == nil {
+			nopLogger := zerolog.Nop()
+			logger = &nopLogger
+		}
+
+		if maxConcurrent <= 0 {
+			maxConcurrent = 1
+		}
+
+		globalInstance = &LibreExcel2PDF{
+			libreOfficeBin: libreOfficeBin,
+			logger:         logger,
+			maxConcurrent:  maxConcurrent,
+			started:        false,
+		}
+	})
+
+	return globalInstance
+}
+
+// ResetGlobalInstance resets the singleton instance (useful for testing)
+// WARNING: Only call this when you're certain no conversions are in progress
+func ResetGlobalInstance() {
+	globalInstanceMu.Lock()
+	defer globalInstanceMu.Unlock()
+
+	if globalInstance != nil && globalInstance.started {
+		globalInstance.Shutdown(context.Background())
+	}
+
+	globalInstance = nil
+	globalInstanceOnce = sync.Once{}
+}
+
+// StartUp initializes and starts the main loop for handling conversion requests
+func (l *LibreExcel2PDF) StartUp(ctx context.Context) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if l.started {
+		l.logger.Warn().Msg("LibreExcel2PDF already started")
+		return
+	}
+
+	l.ctx, l.cancel = context.WithCancel(ctx)
+	l.taskQueue = make(chan *conversionTask, l.maxConcurrent*2)
+	l.started = true
+
+	// Start worker pool
+	for i := 0; i < l.maxConcurrent; i++ {
+		l.wg.Add(1)
+		go l.worker(i)
+	}
+
+	l.logger.Info().Int("workers", l.maxConcurrent).Msg("LibreExcel2PDF started")
+}
+
+// worker processes conversion tasks from the queue
+func (l *LibreExcel2PDF) worker(id int) {
+	defer l.wg.Done()
+
+	workerLogger := l.logger.With().Int("worker", id).Logger()
+	workerLogger.Debug().Msg("worker started")
+
+	for {
+		select {
+		case <-l.ctx.Done():
+			workerLogger.Debug().Msg("worker shutting down")
+			return
+
+		case task, ok := <-l.taskQueue:
+			if !ok {
+				workerLogger.Debug().Msg("task queue closed, worker exiting")
+				return
+			}
+
+			// Process the task
+			result := l.executeConversion(task.ctx, task.config, workerLogger)
+
+			// Send result back
+			select {
+			case task.result <- result:
+			case <-task.ctx.Done():
+				// Caller context cancelled, don't block
+			}
+		}
+	}
+}
+
+// executeConversion performs the actual LibreOffice conversion
+func (l *LibreExcel2PDF) executeConversion(ctx context.Context, config ExcelToPDFTaskConfig, workerLogger zerolog.Logger) *util.Result {
+	// Get logger from context if available, otherwise use task logger, otherwise worker logger
+	logger := workerLogger
+	if ctxLogger := ctx.Value("ctxLogger"); ctxLogger != nil {
+		if ctxLoggerTyped, ok := ctxLogger.(*zerolog.Logger); ok {
+			logger = *ctxLoggerTyped
+		}
+	} else if config.Logger != nil {
+		logger = *config.Logger
+	}
+
+	logger = logger.With().
+		Str("input", config.InputExcelPath).
+		Str("output", config.OutputPDFPath).
+		Logger()
+
+	logger.Info().Msg("starting Excel-to-PDF conversion")
+
+	// Get absolute paths
+	absInputPath, err := filepath.Abs(config.InputExcelPath)
+	if err != nil {
+		logger.Err(err).Msg("failed to get absolute input path")
+		return util.Error("filepath.Abs(input)", err)
+	}
+
+	absOutputPath, err := filepath.Abs(config.OutputPDFPath)
+	if err != nil {
+		logger.Err(err).Msg("failed to get absolute output path")
+		return util.Error("filepath.Abs(output)", err)
+	}
+
+	// Ensure output directory exists
+	outputDir := filepath.Dir(absOutputPath)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		logger.Err(err).Msg("failed to create output directory")
+		return util.Error("os.MkdirAll", err)
+	}
+
+	// Build LibreOffice command
+	// --headless: run without UI
+	// --convert-to pdf: convert to PDF format
+	// --outdir: specify output directory
+	args := []string{
+		"--headless",
+		"--convert-to", "pdf",
+		"--outdir", outputDir,
+		absInputPath,
+	}
+
+	logger.Debug().
+		Str("bin", l.libreOfficeBin).
+		Strs("args", args).
+		Msg("executing LibreOffice command")
+
+	// Create command with context for timeout/cancellation support
+	cmd := exec.CommandContext(ctx, l.libreOfficeBin, args...)
+
+	// Capture output for debugging
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Err(err).
+			Str("output", string(output)).
+			Msg("LibreOffice conversion failed")
+		return util.Error("exec.Command", fmt.Errorf("LibreOffice failed: %w\nOutput: %s", err, string(output)))
+	}
+
+	logger.Debug().Str("output", string(output)).Msg("LibreOffice conversion output")
+
+	// LibreOffice converts "input.xlsx" to "input.pdf" in the output directory
+	// We need to handle the case where output filename doesn't match our desired name
+	inputBase := filepath.Base(absInputPath)
+	inputExt := filepath.Ext(inputBase)
+	inputName := inputBase[:len(inputBase)-len(inputExt)]
+	libreOutputPath := filepath.Join(outputDir, inputName+".pdf")
+
+	// If LibreOffice output path differs from desired path, rename it
+	if libreOutputPath != absOutputPath {
+		logger.Debug().
+			Str("from", libreOutputPath).
+			Str("to", absOutputPath).
+			Msg("renaming output file")
+
+		if err := os.Rename(libreOutputPath, absOutputPath); err != nil {
+			logger.Err(err).Msg("failed to rename output file")
+			return util.Error("os.Rename", err)
+		}
+	}
+
+	// Verify output file exists
+	if _, err := os.Stat(absOutputPath); os.IsNotExist(err) {
+		logger.Error().Msg("output PDF file not created")
+		return util.MsgError("executeConversion", "output PDF file not created")
+	}
+
+	logger.Info().Msg("conversion completed successfully")
+	return nil
+}
+
+// Convert performs a synchronous, thread-safe Excel-to-PDF conversion
+func (l *LibreExcel2PDF) Convert(ctx context.Context, config ExcelToPDFTaskConfig) *util.Result {
+	// Validate config
+	if res := config.Validate(); res != nil {
+		return res.With("Validate")
+	}
+
+	l.mu.Lock()
+	if !l.started {
+		l.mu.Unlock()
+		return util.MsgError("Convert", "LibreExcel2PDF not started - call StartUp() first")
+	}
+	l.mu.Unlock()
+
+	// Create result channel
+	resultChan := make(chan *util.Result, 1)
+
+	task := &conversionTask{
+		ctx:    ctx,
+		config: config,
+		result: resultChan,
+	}
+
+	// Submit task to queue (blocks if queue is full)
+	select {
+	case l.taskQueue <- task:
+		// Task queued successfully
+	case <-ctx.Done():
+		return util.Error("Convert", ctx.Err())
+	case <-l.ctx.Done():
+		return util.MsgError("Convert", "LibreExcel2PDF is shutting down")
+	}
+
+	// Wait for result
+	select {
+	case result := <-resultChan:
+		return result
+	case <-ctx.Done():
+		return util.Error("Convert", ctx.Err())
+	case <-l.ctx.Done():
+		return util.MsgError("Convert", "LibreExcel2PDF was shut down")
+	}
+}
+
+// Shutdown gracefully shuts down the converter, completing queued tasks
+func (l *LibreExcel2PDF) Shutdown(ctx context.Context) {
+	l.mu.Lock()
+	if !l.started {
+		l.mu.Unlock()
+		l.logger.Warn().Msg("LibreExcel2PDF not started, nothing to shutdown")
+		return
+	}
+	l.mu.Unlock()
+
+	l.logger.Info().Msg("shutting down LibreExcel2PDF")
+
+	// Close task queue to prevent new tasks
+	close(l.taskQueue)
+
+	// Wait for workers to finish with timeout
+	done := make(chan struct{})
+	go func() {
+		l.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		l.logger.Info().Msg("all workers finished gracefully")
+	case <-ctx.Done():
+		l.logger.Warn().Msg("shutdown timeout - cancelling remaining tasks")
+		l.cancel()
+		<-done
+	}
+
+	l.mu.Lock()
+	l.started = false
+	l.mu.Unlock()
+
+	l.logger.Info().Msg("LibreExcel2PDF shutdown complete")
+}
