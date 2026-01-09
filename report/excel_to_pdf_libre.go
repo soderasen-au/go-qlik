@@ -50,6 +50,7 @@ type LibreExcel2PDF struct {
 	libreOfficeBin string
 	logger         *zerolog.Logger
 	maxConcurrent  int
+	tempFolder     string // Base temp folder for worker profile directories
 
 	// Concurrency control
 	mu        sync.Mutex
@@ -76,7 +77,7 @@ var (
 // NewLibreExcel2PDF returns a singleton global instance of LibreOffice-based Excel-to-PDF converter
 // The first call initializes the singleton with the provided parameters
 // Subsequent calls return the same instance (ignoring new parameters)
-func NewLibreExcel2PDF(libreOfficeBin string, logger *zerolog.Logger, maxConcurrent int) *LibreExcel2PDF {
+func NewLibreExcel2PDF(libreOfficeBin string, logger *zerolog.Logger, maxConcurrent int, tempFolder string) *LibreExcel2PDF {
 	globalInstanceOnce.Do(func() {
 		if libreOfficeBin == "" {
 			libreOfficeBin = "libreoffice"
@@ -91,10 +92,15 @@ func NewLibreExcel2PDF(libreOfficeBin string, logger *zerolog.Logger, maxConcurr
 			maxConcurrent = 1
 		}
 
+		if tempFolder == "" {
+			tempFolder = os.TempDir()
+		}
+
 		globalInstance = &LibreExcel2PDF{
 			libreOfficeBin: libreOfficeBin,
 			logger:         logger,
 			maxConcurrent:  maxConcurrent,
+			tempFolder:     tempFolder,
 			started:        false,
 		}
 	})
@@ -146,6 +152,15 @@ func (l *LibreExcel2PDF) worker(id int) {
 	workerLogger := l.logger.With().Int("worker", id).Logger()
 	workerLogger.Debug().Msg("worker started")
 
+	// Create worker-specific user profile directory
+	workerProfileDir := filepath.Join(l.tempFolder, fmt.Sprintf("libreoffice-worker-%d", id))
+	if err := os.MkdirAll(workerProfileDir, 0755); err != nil {
+		workerLogger.Err(err).Str("profile_dir", workerProfileDir).Msg("failed to create worker profile directory")
+		// Continue anyway - executeConversion will handle the error
+	} else {
+		workerLogger.Debug().Str("profile_dir", workerProfileDir).Msg("worker profile directory created")
+	}
+
 	for {
 		select {
 		case <-l.ctx.Done():
@@ -158,8 +173,8 @@ func (l *LibreExcel2PDF) worker(id int) {
 				return
 			}
 
-			// Process the task
-			result := l.executeConversion(task.ctx, task.config, workerLogger)
+			// Process the task with worker-specific profile directory
+			result := l.executeConversion(task.ctx, task.config, workerProfileDir, workerLogger)
 
 			// Send result back
 			select {
@@ -172,8 +187,7 @@ func (l *LibreExcel2PDF) worker(id int) {
 }
 
 // executeConversion performs the actual LibreOffice conversion
-func (l *LibreExcel2PDF) executeConversion(ctx context.Context, config ExcelToPDFTaskConfig, workerLogger zerolog.Logger) *util.Result {
-	// Get logger from context if available, otherwise use task logger, otherwise worker logger
+func (l *LibreExcel2PDF) executeConversion(ctx context.Context, config ExcelToPDFTaskConfig, workerProfileDir string, workerLogger zerolog.Logger) *util.Result {
 	logger := workerLogger
 	if ctxLogger := ctx.Value("ctxLogger"); ctxLogger != nil {
 		if ctxLoggerTyped, ok := ctxLogger.(*zerolog.Logger); ok {
@@ -210,11 +224,19 @@ func (l *LibreExcel2PDF) executeConversion(ctx context.Context, config ExcelToPD
 		return util.Error("os.MkdirAll", err)
 	}
 
-	// Build LibreOffice command
-	// --headless: run without UI
-	// --convert-to pdf: convert to PDF format
-	// --outdir: specify output directory
+	absWorkerProfileDir, err := filepath.Abs(workerProfileDir)
+	if err != nil {
+		logger.Err(err).Msg("failed to get absolute path for worker profile directory")
+		return util.Error("filepath.Abs(workerProfileDir)", err)
+	}
+
+	userInstallPath := filepath.ToSlash(absWorkerProfileDir)
+	if len(userInstallPath) > 0 && userInstallPath[0] == '/' {
+		userInstallPath = userInstallPath[1:]
+	}
+	userInstallURL := "file:///" + userInstallPath
 	args := []string{
+		fmt.Sprintf("-env:UserInstallation=%s", userInstallURL),
 		"--headless",
 		"--convert-to", "pdf",
 		"--outdir", outputDir,
@@ -349,5 +371,26 @@ func (l *LibreExcel2PDF) Shutdown(ctx context.Context) {
 	l.started = false
 	l.mu.Unlock()
 
+	l.cleanupWorkerProfiles()
+
 	l.logger.Info().Msg("LibreExcel2PDF shutdown complete")
+}
+
+// cleanupWorkerProfiles removes worker-specific profile directories
+func (l *LibreExcel2PDF) cleanupWorkerProfiles() {
+	for i := 0; i < l.maxConcurrent; i++ {
+		workerProfileDir := filepath.Join(l.tempFolder, fmt.Sprintf("libreoffice-worker-%d", i))
+		if err := os.RemoveAll(workerProfileDir); err != nil {
+			l.logger.Warn().
+				Err(err).
+				Int("worker", i).
+				Str("profile_dir", workerProfileDir).
+				Msg("failed to clean up worker profile directory")
+		} else {
+			l.logger.Debug().
+				Int("worker", i).
+				Str("profile_dir", workerProfileDir).
+				Msg("worker profile directory cleaned up")
+		}
+	}
 }

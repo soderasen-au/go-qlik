@@ -39,7 +39,7 @@ func TestLibreExcel2PDF_Basic(t *testing.T) {
 	// Reset singleton for test isolation
 	ResetGlobalInstance()
 
-	converter := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 2)
+	converter := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 2, "")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -80,7 +80,7 @@ func TestLibreExcel2PDF_Concurrent(t *testing.T) {
 	// Reset singleton for test isolation
 	ResetGlobalInstance()
 
-	converter := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 2)
+	converter := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 2, "")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -148,7 +148,7 @@ func TestLibreExcel2PDF_ContextTimeout(t *testing.T) {
 	// Reset singleton for test isolation
 	ResetGlobalInstance()
 
-	converter := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 1)
+	converter := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 1, "")
 
 	mainCtx := context.Background()
 	converter.StartUp(mainCtx)
@@ -188,7 +188,7 @@ func TestLibreExcel2PDF_ContextLogger(t *testing.T) {
 	// Reset singleton for test isolation
 	ResetGlobalInstance()
 
-	converter := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 1)
+	converter := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 1, "")
 
 	ctx := context.Background()
 	converter.StartUp(ctx)
@@ -280,7 +280,7 @@ func TestLibreExcel2PDF_CustomBinPath(t *testing.T) {
 	ResetGlobalInstance()
 
 	// Test with invalid binary path
-	converter := NewLibreExcel2PDF("/nonexistent/libreoffice", nil, 1)
+	converter := NewLibreExcel2PDF("/nonexistent/libreoffice", nil, 1, "")
 
 	if converter.libreOfficeBin != "/nonexistent/libreoffice" {
 		t.Errorf("expected custom bin path, got: %s", converter.libreOfficeBin)
@@ -288,7 +288,7 @@ func TestLibreExcel2PDF_CustomBinPath(t *testing.T) {
 
 	// Reset and test with empty binary path (should default to "libreoffice")
 	ResetGlobalInstance()
-	converter2 := NewLibreExcel2PDF("", nil, 1)
+	converter2 := NewLibreExcel2PDF("", nil, 1, "")
 	if converter2.libreOfficeBin != "libreoffice" {
 		t.Errorf("expected default bin path, got: %s", converter2.libreOfficeBin)
 	}
@@ -302,14 +302,14 @@ func TestLibreExcel2PDF_DefaultMaxConcurrent(t *testing.T) {
 	ResetGlobalInstance()
 
 	// Test with zero max concurrent (should default to 1)
-	converter := NewLibreExcel2PDF("libreoffice", nil, 0)
+	converter := NewLibreExcel2PDF("libreoffice", nil, 0, "")
 	if converter.maxConcurrent != 1 {
 		t.Errorf("expected default maxConcurrent=1, got: %d", converter.maxConcurrent)
 	}
 
 	// Reset and test with negative max concurrent (should default to 1)
 	ResetGlobalInstance()
-	converter2 := NewLibreExcel2PDF("libreoffice", nil, -5)
+	converter2 := NewLibreExcel2PDF("libreoffice", nil, -5, "")
 	if converter2.maxConcurrent != 1 {
 		t.Errorf("expected default maxConcurrent=1, got: %d", converter2.maxConcurrent)
 	}
@@ -324,7 +324,7 @@ func TestLibreExcel2PDF_ShutdownGraceful(t *testing.T) {
 	// Reset singleton for test isolation
 	ResetGlobalInstance()
 
-	converter := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 2)
+	converter := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 2, "")
 
 	ctx := context.Background()
 	converter.StartUp(ctx)
@@ -359,7 +359,7 @@ func TestLibreExcel2PDF_NilLogger(t *testing.T) {
 	// Reset singleton for test isolation
 	ResetGlobalInstance()
 
-	converter := NewLibreExcel2PDF("libreoffice", nil, 1)
+	converter := NewLibreExcel2PDF("libreoffice", nil, 1, "")
 
 	if converter.logger == nil {
 		t.Errorf("expected non-nil logger (should default to Nop)")
@@ -380,7 +380,7 @@ func TestLibreExcel2PDF_Singleton(t *testing.T) {
 	ResetGlobalInstance()
 
 	// First call with specific params
-	converter1 := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 4)
+	converter1 := NewLibreExcel2PDF("libreoffice", loggers.CoreDebugLogger, 4, "")
 	if converter1 == nil {
 		t.Fatal("first call returned nil")
 	}
@@ -389,7 +389,7 @@ func TestLibreExcel2PDF_Singleton(t *testing.T) {
 	}
 
 	// Second call with different params - should return same instance
-	converter2 := NewLibreExcel2PDF("/custom/path/libreoffice", nil, 8)
+	converter2 := NewLibreExcel2PDF("/custom/path/libreoffice", nil, 8, "")
 	if converter2 == nil {
 		t.Fatal("second call returned nil")
 	}
@@ -414,12 +414,12 @@ func TestLibreExcel2PDF_Singleton(t *testing.T) {
 func TestLibreExcel2PDF_ResetGlobalInstance(t *testing.T) {
 	// Create first instance
 	ResetGlobalInstance()
-	converter1 := NewLibreExcel2PDF("libreoffice", nil, 2)
+	converter1 := NewLibreExcel2PDF("libreoffice", nil, 2, "")
 	addr1 := fmt.Sprintf("%p", converter1)
 
 	// Reset and create new instance
 	ResetGlobalInstance()
-	converter2 := NewLibreExcel2PDF("libreoffice", nil, 4)
+	converter2 := NewLibreExcel2PDF("libreoffice", nil, 4, "")
 	addr2 := fmt.Sprintf("%p", converter2)
 
 	// Should be different instances

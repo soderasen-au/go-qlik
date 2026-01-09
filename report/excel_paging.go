@@ -949,7 +949,7 @@ func (p *ExcelPagingPrinter) convertExcelToPDF(rResult *ReportResult) *util.Resu
 	}
 
 	ctx := context.Background()
-	converter := NewLibreExcel2PDF("", &logger, 4) // no worries, it uses global instance anyway
+	converter := NewLibreExcel2PDF("", &logger, 4, "") // no worries, it uses global instance anyway
 	if res := converter.Convert(ctx, excel2PDFConfig); res != nil {
 		return res.With("ExcelToPDFWin.Convert")
 	}

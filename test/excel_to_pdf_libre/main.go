@@ -64,7 +64,7 @@ func main() {
 		Msg("starting Excel to PDF conversion test")
 
 	// Create converter
-	converter := report.NewLibreExcel2PDF(*libreOfficeBin, logger, *maxConcurrent)
+	converter := report.NewLibreExcel2PDF(*libreOfficeBin, logger, *maxConcurrent, "")
 
 	// Start up converter
 	ctx := context.Background()
