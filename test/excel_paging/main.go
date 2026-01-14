@@ -120,6 +120,10 @@ func main() {
 		TotalRecordsLabel: *totalRecordsLabel,
 		ShowColumnNumbers: *showColumnNumbers,
 		ShowSubtotals:     *showSubtotals,
+		HeaderGroups: []report.HeaderGroup{
+			// {Name: "Product Information", Start: 0, Length: 2},
+			{Name: "Sales Metrics", Start: 2, Length: 3},
+		},
 	}
 
 	// If title is set, use it as the report name for the filename

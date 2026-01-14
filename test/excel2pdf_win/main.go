@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/qlik-oss/enigma-go/v4"
-	"github.com/soderasen-au/go-common/crypto"
 	"github.com/rs/zerolog"
+	"github.com/soderasen-au/go-common/crypto"
 	"github.com/soderasen-au/go-common/loggers"
 	"github.com/soderasen-au/go-common/util"
 
@@ -35,16 +35,16 @@ var (
 	outputSelection   = flag.Bool("output-selection", true, "Output current selection")
 
 	// PDF conversion options
-	convertToPDF      = flag.Bool("convert-pdf", true, "Convert Excel to PDF after generation")
-	pdfOrientation    = flag.String("pdf-orientation", "landscape", "PDF orientation (landscape/portrait)")
-	pdfFitToWidth     = flag.Int("pdf-fit-width", 1, "Fit PDF to N pages wide (0 = no fit)")
-	pdfFitToHeight    = flag.Int("pdf-fit-height", 0, "Fit PDF to N pages tall (0 = no fit)")
-	pdfLeftMargin     = flag.Float64("pdf-left-margin", 0.5, "PDF left margin in inches")
-	pdfRightMargin    = flag.Float64("pdf-right-margin", 0.5, "PDF right margin in inches")
-	pdfTopMargin      = flag.Float64("pdf-top-margin", 0.75, "PDF top margin in inches")
-	pdfBottomMargin   = flag.Float64("pdf-bottom-margin", 0.75, "PDF bottom margin in inches")
+	convertToPDF    = flag.Bool("convert-pdf", true, "Convert Excel to PDF after generation")
+	pdfOrientation  = flag.String("pdf-orientation", "landscape", "PDF orientation (landscape/portrait)")
+	pdfFitToWidth   = flag.Int("pdf-fit-width", 1, "Fit PDF to N pages wide (0 = no fit)")
+	pdfFitToHeight  = flag.Int("pdf-fit-height", 0, "Fit PDF to N pages tall (0 = no fit)")
+	pdfLeftMargin   = flag.Float64("pdf-left-margin", 0.5, "PDF left margin in inches")
+	pdfRightMargin  = flag.Float64("pdf-right-margin", 0.5, "PDF right margin in inches")
+	pdfTopMargin    = flag.Float64("pdf-top-margin", 0.75, "PDF top margin in inches")
+	pdfBottomMargin = flag.Float64("pdf-bottom-margin", 0.75, "PDF bottom margin in inches")
 
-	help              = flag.Bool("h", false, "Show help message")
+	help = flag.Bool("h", false, "Show help message")
 )
 
 func init() {
@@ -175,20 +175,20 @@ func convertExcelToPDF(excelPath string, logger *zerolog.Logger) (string, *util.
 
 	// Create conversion config
 	config := report.ExcelToPDFWinConfig{
-		InputExcelPath:   excelPath,
-		OutputPDFPath:    pdfPath,
-		PaperSize:        9, // xlPaperA4
-		Orientation:      orientation,
-		FitToWidth:       *pdfFitToWidth,
-		FitToHeight:      *pdfFitToHeight,
-		LeftMargin:       *pdfLeftMargin,
-		RightMargin:      *pdfRightMargin,
-		TopMargin:        *pdfTopMargin,
-		BottomMargin:     *pdfBottomMargin,
-		ExportMultiplePDFs: false,
+		InputExcelPath:       excelPath,
+		OutputPDFPath:        pdfPath,
+		PaperSize:            9, // xlPaperA4
+		Orientation:          orientation,
+		FitToWidth:           *pdfFitToWidth,
+		FitToHeight:          *pdfFitToHeight,
+		LeftMargin:           *pdfLeftMargin,
+		RightMargin:          *pdfRightMargin,
+		TopMargin:            *pdfTopMargin,
+		BottomMargin:         *pdfBottomMargin,
+		ExportMultiplePDFs:   false,
 		IncludeDocProperties: true,
-		OpenAfterPublish: false,
-		Logger:           logger,
+		OpenAfterPublish:     false,
+		Logger:               logger,
 	}
 
 	converter, res := report.NewExcelToPDFWin(config)

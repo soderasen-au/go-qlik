@@ -31,46 +31,46 @@ func TestDefaultExcelPagingConfig(t *testing.T) {
 // TestNewExcelPagingPrinter tests printer creation with various configs
 func TestNewExcelPagingPrinter(t *testing.T) {
 	tests := []struct {
-		name           string
-		config         ExcelPagingConfig
-		expectedRows   int
-		expectedLabel  string
+		name          string
+		config        ExcelPagingConfig
+		expectedRows  int
+		expectedLabel string
 	}{
 		{
-			name:           "default config",
-			config:         DefaultExcelPagingConfig(),
-			expectedRows:   50,
-			expectedLabel:  "Total Records Found",
+			name:          "default config",
+			config:        DefaultExcelPagingConfig(),
+			expectedRows:  50,
+			expectedLabel: "Total Records Found",
 		},
 		{
-			name:           "zero rows per page defaults to 50",
-			config:         ExcelPagingConfig{RowsPerPage: 0},
-			expectedRows:   50,
-			expectedLabel:  "Total Records Found",
+			name:          "zero rows per page defaults to 50",
+			config:        ExcelPagingConfig{RowsPerPage: 0},
+			expectedRows:  50,
+			expectedLabel: "Total Records Found",
 		},
 		{
-			name:           "negative rows per page defaults to 50",
-			config:         ExcelPagingConfig{RowsPerPage: -10},
-			expectedRows:   50,
-			expectedLabel:  "Total Records Found",
+			name:          "negative rows per page defaults to 50",
+			config:        ExcelPagingConfig{RowsPerPage: -10},
+			expectedRows:  50,
+			expectedLabel: "Total Records Found",
 		},
 		{
-			name:           "custom rows per page",
-			config:         ExcelPagingConfig{RowsPerPage: 100},
-			expectedRows:   100,
-			expectedLabel:  "Total Records Found",
+			name:          "custom rows per page",
+			config:        ExcelPagingConfig{RowsPerPage: 100},
+			expectedRows:  100,
+			expectedLabel: "Total Records Found",
 		},
 		{
-			name:           "custom total records label",
-			config:         ExcelPagingConfig{RowsPerPage: 25, TotalRecordsLabel: "Records"},
-			expectedRows:   25,
-			expectedLabel:  "Records",
+			name:          "custom total records label",
+			config:        ExcelPagingConfig{RowsPerPage: 25, TotalRecordsLabel: "Records"},
+			expectedRows:  25,
+			expectedLabel: "Records",
 		},
 		{
-			name:           "empty label defaults",
-			config:         ExcelPagingConfig{RowsPerPage: 25, TotalRecordsLabel: ""},
-			expectedRows:   25,
-			expectedLabel:  "Total Records Found",
+			name:          "empty label defaults",
+			config:        ExcelPagingConfig{RowsPerPage: 25, TotalRecordsLabel: ""},
+			expectedRows:  25,
+			expectedLabel: "Total Records Found",
 		},
 	}
 
@@ -339,13 +339,13 @@ func TestPaginationCalculation(t *testing.T) {
 		rowsPerPage int
 		expected    int
 	}{
-		{0, 50, 1},    // Empty dataset = 1 page
-		{1, 50, 1},    // 1 row = 1 page
-		{50, 50, 1},   // Exactly 1 page
-		{51, 50, 2},   // Just over 1 page
-		{100, 50, 2},  // Exactly 2 pages
-		{101, 50, 3},  // Just over 2 pages
-		{150, 50, 3},  // Exactly 3 pages
+		{0, 50, 1},      // Empty dataset = 1 page
+		{1, 50, 1},      // 1 row = 1 page
+		{50, 50, 1},     // Exactly 1 page
+		{51, 50, 2},     // Just over 1 page
+		{100, 50, 2},    // Exactly 2 pages
+		{101, 50, 3},    // Just over 2 pages
+		{150, 50, 3},    // Exactly 3 pages
 		{1000, 100, 10}, // 10 pages
 	}
 
@@ -363,7 +363,7 @@ func TestPaginationCalculation(t *testing.T) {
 	}
 }
 
-// TestExcelPagingConfig_JSON tests JSON serialization of config
+// TestExcelPagingConfig_Serialization tests JSON serialization of config
 func TestExcelPagingConfig_Serialization(t *testing.T) {
 	config := ExcelPagingConfig{
 		RowsPerPage:       100,
@@ -371,6 +371,10 @@ func TestExcelPagingConfig_Serialization(t *testing.T) {
 		TotalRecordsLabel: "Records Found",
 		ShowColumnNumbers: true,
 		ShowSubtotals:     true,
+		HeaderGroups: []HeaderGroup{
+			{Name: "Group 1", Start: 0, Length: 3},
+			{Name: "Group 2", Start: 3, Length: 2},
+		},
 	}
 
 	// Verify fields are set correctly
@@ -386,6 +390,12 @@ func TestExcelPagingConfig_Serialization(t *testing.T) {
 	if !config.ShowSubtotals {
 		t.Error("expected ShowSubtotals=true")
 	}
+	if len(config.HeaderGroups) != 2 {
+		t.Errorf("expected 2 HeaderGroups, got %d", len(config.HeaderGroups))
+	}
+	if config.HeaderGroups[0].Name != "Group 1" {
+		t.Errorf("expected first group name='Group 1', got '%s'", config.HeaderGroups[0].Name)
+	}
 }
 
 // TestExcelPagingPrinter_OutputFile tests output file path generation
@@ -395,8 +405,8 @@ func TestExcelPagingPrinter_OutputFile(t *testing.T) {
 	defer os.RemoveAll(outputDir)
 
 	config := ExcelPagingConfig{
-		RowsPerPage:   50,
-		ReportTitle:   "My Custom Report",
+		RowsPerPage: 50,
+		ReportTitle: "My Custom Report",
 	}
 
 	printer := NewExcelPagingPrinter(config)
@@ -405,6 +415,64 @@ func TestExcelPagingPrinter_OutputFile(t *testing.T) {
 	// This is tested implicitly through the Print method
 	if printer.Config.ReportTitle != "My Custom Report" {
 		t.Errorf("expected ReportTitle='My Custom Report', got '%s'", printer.Config.ReportTitle)
+	}
+}
+
+// TestHeaderGroup tests HeaderGroup type
+func TestHeaderGroup(t *testing.T) {
+	group := HeaderGroup{
+		Name:   "Sales Metrics",
+		Start:  0,
+		Length: 3,
+	}
+
+	if group.Name != "Sales Metrics" {
+		t.Errorf("expected Name='Sales Metrics', got '%s'", group.Name)
+	}
+	if group.Start != 0 {
+		t.Errorf("expected Start=0, got %d", group.Start)
+	}
+	if group.Length != 3 {
+		t.Errorf("expected Length=3, got %d", group.Length)
+	}
+}
+
+// TestExcelPagingPrinter_HeaderGrouping tests header grouping functionality
+func TestExcelPagingPrinter_HeaderGrouping(t *testing.T) {
+	config := ExcelPagingConfig{
+		RowsPerPage: 50,
+		HeaderGroups: []HeaderGroup{
+			{Name: "Group A", Start: 0, Length: 2},
+			{Name: "Group B", Start: 3, Length: 2},
+		},
+	}
+
+	printer := NewExcelPagingPrinter(config)
+
+	if len(printer.Config.HeaderGroups) != 2 {
+		t.Errorf("expected 2 header groups, got %d", len(printer.Config.HeaderGroups))
+	}
+
+	// Verify first group
+	if printer.Config.HeaderGroups[0].Name != "Group A" {
+		t.Errorf("expected group 0 name='Group A', got '%s'", printer.Config.HeaderGroups[0].Name)
+	}
+	if printer.Config.HeaderGroups[0].Start != 0 {
+		t.Errorf("expected group 0 start=0, got %d", printer.Config.HeaderGroups[0].Start)
+	}
+	if printer.Config.HeaderGroups[0].Length != 2 {
+		t.Errorf("expected group 0 length=2, got %d", printer.Config.HeaderGroups[0].Length)
+	}
+
+	// Verify second group
+	if printer.Config.HeaderGroups[1].Name != "Group B" {
+		t.Errorf("expected group 1 name='Group B', got '%s'", printer.Config.HeaderGroups[1].Name)
+	}
+	if printer.Config.HeaderGroups[1].Start != 3 {
+		t.Errorf("expected group 1 start=3, got %d", printer.Config.HeaderGroups[1].Start)
+	}
+	if printer.Config.HeaderGroups[1].Length != 2 {
+		t.Errorf("expected group 1 length=2, got %d", printer.Config.HeaderGroups[1].Length)
 	}
 }
 

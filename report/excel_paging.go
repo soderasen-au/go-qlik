@@ -17,13 +17,20 @@ import (
 	"github.com/soderasen-au/go-qlik/qlik/engine"
 )
 
+type HeaderGroup struct {
+	Name   string `json:"name" yaml:"name"`
+	Start  int    `json:"start" yaml:"start"`
+	Length int    `json:"length" yaml:"length"`
+}
+
 // ExcelPagingConfig holds configuration for paginated Excel export
 type ExcelPagingConfig struct {
-	RowsPerPage       int    `json:"rows_per_page" yaml:"rows_per_page"`
-	ReportTitle       string `json:"report_title" yaml:"report_title"`
-	TotalRecordsLabel string `json:"total_records_label" yaml:"total_records_label"`
-	ShowColumnNumbers bool   `json:"show_column_numbers" yaml:"show_column_numbers"`
-	ShowSubtotals     bool   `json:"show_subtotals" yaml:"show_subtotals"`
+	RowsPerPage       int           `json:"rows_per_page" yaml:"rows_per_page"`
+	ReportTitle       string        `json:"report_title" yaml:"report_title"`
+	TotalRecordsLabel string        `json:"total_records_label" yaml:"total_records_label"`
+	ShowColumnNumbers bool          `json:"show_column_numbers" yaml:"show_column_numbers"`
+	ShowSubtotals     bool          `json:"show_subtotals" yaml:"show_subtotals"`
+	HeaderGroups      []HeaderGroup `json:"header_groups" yaml:"header_groups"`
 }
 
 // DefaultExcelPagingConfig returns default configuration
@@ -321,7 +328,7 @@ func (p *ExcelPagingPrinter) printPageSubtotals(subtotals []float64, isNumeric [
 	return &resRect, nil
 }
 
-// printTableHeader prints the object column headers
+// printTableHeader prints the object column headers (2 rows: 1st row for groups, 2nd row for actual headers)
 func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
 	if p.layout == nil {
 		return nil, util.MsgError("printTableHeader", "nil layout")
@@ -329,7 +336,7 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 	logger := p.logger.With().Str("print", "tableHeader").Logger()
 
 	resRect := rect
-	resRect.Height = 1
+	resRect.Height = 2
 	resRect.Width = 0
 
 	DimCnt := len(p.layout.HyperCube.DimensionInfo)
@@ -346,7 +353,10 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 	p.cube2report = make(map[int]int)
 	ColCnt := 0
 
-	boldStyle := &excelize.Style{Font: &excelize.Font{Bold: true}}
+	boldStyle := &excelize.Style{
+		Font:      &excelize.Font{Bold: true},
+		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
+	}
 	if p.report.AllBorders {
 		boldStyle.Border = []excelize.Border{
 			{Type: "left", Color: "000000", Style: 1},
@@ -393,7 +403,8 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 		}
 		repIdx := p.cube2report[ColCnt]
 
-		cellName, err := excelize.CoordinatesToCellName(rect.Left+repIdx, rect.Top)
+		// Print to 2nd row (actual header row)
+		cellName, err := excelize.CoordinatesToCellName(rect.Left+repIdx, rect.Top+1)
 		if err != nil {
 			return nil, util.Error("CoordinatesToCellName", err)
 		}
@@ -467,7 +478,7 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 		for _, colHeaderFmt := range p.report.ColumnHeaderFormats {
 			if colHeaderFmt.ColumnType == StaticColumnType {
 				repIdx := colHeaderFmt.Order
-				cellName, _ := excelize.CoordinatesToCellName(rect.Left+repIdx, rect.Top)
+				cellName, _ := excelize.CoordinatesToCellName(rect.Left+repIdx, rect.Top+1)
 				p.excel.SetCellStr(sheet, cellName, colHeaderFmt.Label)
 				p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
 				ColCnt++
@@ -476,7 +487,94 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 	}
 
 	resRect.Width = ColCnt
+
+	// Group table headers according to HeaderGroups configuration
+	if res := p.groupTableHeader(sheet, rect, ColCnt, styleId); res != nil {
+		return nil, res.With("groupTableHeader")
+	}
+
 	return &resRect, nil
+}
+
+// groupTableHeader merges table headers into groups according to HeaderGroups configuration
+func (p *ExcelPagingPrinter) groupTableHeader(sheet string, rect enigma.Rect, colCount int, styleId int) *util.Result {
+	logger := p.logger.With().Str("print", "groupTableHeader").Logger()
+
+	inGroup := make(map[int]bool)
+	for _, group := range p.Config.HeaderGroups {
+		for i := group.Start; i < group.Start+group.Length && i < colCount; i++ {
+			inGroup[i] = true
+		}
+	}
+
+	// For columns not in any group, merge 1st and 2nd rows
+	for col := 0; col < colCount; col++ {
+		if !inGroup[col] {
+			cell2ndRow, err := excelize.CoordinatesToCellName(rect.Left+col, rect.Top+1)
+			if err != nil {
+				logger.Err(err).Msg("CoordinatesToCellName for 2nd row")
+				return util.Error("CoordinatesToCellName", err)
+			}
+			headerText, err := p.excel.GetCellValue(sheet, cell2ndRow)
+			if err != nil {
+				logger.Err(err).Msgf("GetCellValue for %s", cell2ndRow)
+				return util.Error("GetCellValue", err)
+			}
+
+			cell1stRow, err := excelize.CoordinatesToCellName(rect.Left+col, rect.Top)
+			if err != nil {
+				logger.Err(err).Msg("CoordinatesToCellName for 1st row")
+				return util.Error("CoordinatesToCellName", err)
+			}
+
+			err = p.excel.MergeCell(sheet, cell1stRow, cell2ndRow)
+			if err != nil {
+				logger.Err(err).Msgf("MergeCell %s:%s", cell1stRow, cell2ndRow)
+				return util.Error("MergeCell", err)
+			}
+
+			p.excel.SetCellStr(sheet, cell1stRow, headerText)
+			p.excel.SetCellStyle(sheet, cell1stRow, cell1stRow, styleId)
+			logger.Debug().Msgf("merged non-group column %d: %s", col, headerText)
+		}
+	}
+
+	// For each header group, merge 1st row cells and set group name
+	for _, group := range p.Config.HeaderGroups {
+		if group.Start >= colCount {
+			logger.Warn().Msgf("group start %d exceeds column count %d, skipping", group.Start, colCount)
+			continue
+		}
+
+		endCol := group.Start + group.Length - 1
+		if endCol >= colCount {
+			endCol = colCount - 1
+			logger.Warn().Msgf("group end adjusted to %d (column count: %d)", endCol, colCount)
+		}
+
+		startCell, err := excelize.CoordinatesToCellName(rect.Left+group.Start, rect.Top)
+		if err != nil {
+			logger.Err(err).Msg("CoordinatesToCellName for group start")
+			return util.Error("CoordinatesToCellName", err)
+		}
+		endCell, err := excelize.CoordinatesToCellName(rect.Left+endCol, rect.Top)
+		if err != nil {
+			logger.Err(err).Msg("CoordinatesToCellName for group end")
+			return util.Error("CoordinatesToCellName", err)
+		}
+
+		err = p.excel.MergeCell(sheet, startCell, endCell)
+		if err != nil {
+			logger.Err(err).Msgf("MergeCell %s:%s", startCell, endCell)
+			return util.Error("MergeCell", err)
+		}
+
+		p.excel.SetCellStr(sheet, startCell, group.Name)
+		p.excel.SetCellStyle(sheet, startCell, endCell, styleId)
+		logger.Debug().Msgf("merged group [%d:%d] with name: %s", group.Start, endCol, group.Name)
+	}
+
+	return nil
 }
 
 // printTableRows prints a subset of rows for the current page
