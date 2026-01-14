@@ -802,6 +802,22 @@ func (p *ExcelReportPrinter) printPivotDataCell(excel *excelize.File, sheet stri
 	return nil
 }
 
+func shouldShowChild(doc *enigma.Doc, info *engine.ContainerChildInfo, logger *zerolog.Logger) bool {
+	if strings.TrimSpace(info.ShowCondition) == "" {
+		return true
+	}
+	dual, err := doc.EvaluateEx(engine.ConnCtx, info.ShowCondition)
+	if err != nil {
+		logger.Warn().Err(err).Msg("EvaluateEx showCondition failed, default show")
+		return true
+	}
+	if dual.IsNumeric {
+		return dual.Number != 0
+	}
+	txt := strings.ToLower(strings.TrimSpace(dual.Text))
+	return txt != "" && txt != "false" && txt != "0"
+}
+
 func (p *ExcelReportPrinter) printContainer(doc *enigma.Doc, r Report, objId string, obj *enigma.GenericObject, objLayout *engine.ObjectLayoutEx, rect enigma.Rect, excel *excelize.File, _logger *zerolog.Logger) (*enigma.Rect, *util.Result) {
 	_logger.Info().Msg("print container")
 	if objLayout.ChildList == nil || len(objLayout.ChildList.Items) == 0 {
@@ -819,6 +835,8 @@ func (p *ExcelReportPrinter) printContainer(doc *enigma.Doc, r Report, objId str
 	}
 
 	childArray := make([]*engine.ContainerChildItem, 0)
+	childIndices := make([]int, 0)
+	childMap := make(map[string]int)
 	for ci, entry := range objLayout.ChildList.Items {
 		info := &engine.ContainerChildInfo{}
 		err := json.Unmarshal(entry.Data, info)
@@ -829,23 +847,54 @@ func (p *ExcelReportPrinter) printContainer(doc *enigma.Doc, r Report, objId str
 		}
 		_logger.Debug().Msgf("child map: '%s' [%s extends %s => %s]", info.Title, info.ContainerChildId, info.QExtendsId, entry.Info.Id)
 		childArray = append(childArray, &engine.ContainerChildItem{
+			ID:    entry.Info.Id,
+			Name:  info.Title,
 			Entry: entry,
 			Info:  info,
 		})
+		childIndices = append(childIndices, ci)
+		if info.ContainerChildId != "" {
+			childMap[info.ContainerChildId] = ci
+		}
+		if info.QExtendsId != "" {
+			childMap[info.QExtendsId] = ci
+		}
+	}
+	conainerType := objLayout.Info.Type
+	if conainerType == "container" {
+		childIndices = make([]int, 0)
+		for ci, child := range objLayout.Children {
+			if entryIdx, ok := childMap[child.RefId]; !ok {
+				errmsg := fmt.Sprintf("container child[%d] %s's refId[%s] not found in child list", ci, child.Id, child.RefId)
+				_logger.Error().Msg(errmsg)
+				return nil, util.MsgError("LookupChildList", errmsg)
+			} else {
+				_logger.Debug().Msgf("container child[%d] %s's refId[%s] mapped to child list index[%d]", ci, child.Id, child.RefId, entryIdx)
+				childArray[entryIdx].ID = child.RefId
+				childArray[entryIdx].Name = child.Label
+				childIndices = append(childIndices, entryIdx)
+			}
+		}
 	}
 
 	childResRect := rect
 	resRect := rect
 	resRect.Width = 0
-	for ci, child := range objLayout.Children {
-		clogger := _logger.With().Int("child", ci).Str("Id", child.Id).Str("refId", child.RefId).Logger()
+	for ci, childIndex := range childIndices {
+		child := childArray[childIndex]
+		clogger := _logger.With().Int("child", ci).Str("Id", child.ID).Str("name", child.Name).Logger()
+		if !shouldShowChild(doc, child.Info, &clogger) {
+			clogger.Warn().Msg("skip child by showCondition")
+			continue
+		}
+
 		childOffset := enigma.Rect{Top: childResRect.Top + childResRect.Height, Left: childResRect.Left, Width: 0, Height: 0}
 		if ci > 0 {
 			childOffset.Top += 3
 		}
 
-		if len(objLayout.Children[ci].Label) > 0 {
-			cLabel := objLayout.Children[ci].Label
+		cLabel := child.Name
+		if cLabel != "" {
 			boldFont := &excelize.Style{
 				Font: &excelize.Font{
 					Bold: true,
@@ -873,19 +922,13 @@ func (p *ExcelReportPrinter) printContainer(doc *enigma.Doc, r Report, objId str
 		}
 
 		clogger.Debug().Msg("try to find in child map")
-		childID := ""
-		for _, c := range childArray {
-			if child.RefId == c.Info.ContainerChildId || child.RefId == c.Info.QExtendsId {
-				childID = c.Entry.Info.Id
-			}
-		}
-		if childID == "" {
-			errmsg := fmt.Sprintf("can't find child[%d] %s's refId[%s] in child list", ci, child.Id, child.RefId)
+		if child.ID == "" {
+			errmsg := fmt.Sprintf("can't find child[%s]: %s", child.ID, child.Name)
 			clogger.Error().Msg(errmsg)
 			return nil, util.MsgError("LookupChildList", errmsg)
 		}
 
-		childResRectPtr, res := p.printObject(doc, r, childID, *sheetName, childOffset, excel, &clogger)
+		childResRectPtr, res := p.printObject(doc, r, child.ID, *sheetName, childOffset, excel, &clogger)
 		if res != nil {
 			clogger.Err(res).Msg("PrintChildObject")
 			return nil, res.With("PrintChildObject")
@@ -1578,7 +1621,7 @@ func (p *ExcelReportPrinter) printObject(doc *enigma.Doc, r Report, objId, useSh
 		return nil, res.With("GetObjectLayoutEx")
 	}
 
-	if objLayout.Info.Type == "container" {
+	if objLayout.Info.Type == "container" || objLayout.Info.Type == "sn-tabbed-container" {
 		return p.printContainer(doc, r, objId, obj, objLayout, rect, excel, _logger)
 	}
 

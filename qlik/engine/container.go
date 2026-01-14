@@ -11,6 +11,8 @@ type ContainerChildInfo struct {
 }
 
 type ContainerChildItem struct {
+	ID    string
+	Name  string
 	Entry *enigma.NxContainerEntry
 	Info  *ContainerChildInfo
 }
