@@ -1,4 +1,4 @@
-.PHONY: all build build-jwt build-pdfprinter build-excel-paging build-excel-to-pdf-libre test clean deps deps-python fmt vet lint help test-pdf compare-pdf test-pivot compare-pivot test-excel-paging compare-excel-paging test-excel-to-pdf-libre
+.PHONY: all build build-jwt build-pdfprinter build-excel-paging build-excel-to-pdf-libre build-report-test test clean deps deps-python fmt vet lint help test-pdf compare-pdf test-pivot compare-pivot test-excel-paging compare-excel-paging test-excel-to-pdf-libre test-report test-report-tool
 
 # Python interpreter (use virtual environment if available)
 PYTHON := $(shell if [ -f .venv/bin/python3 ]; then echo .venv/bin/python3; else echo python3; fi)
@@ -7,7 +7,7 @@ PYTHON := $(shell if [ -f .venv/bin/python3 ]; then echo .venv/bin/python3; else
 all: deps fmt vet build test
 
 # Build all binaries
-build: build-jwt build-pdfprinter build-excel-paging build-excel-to-pdf-libre
+build: build-jwt build-pdfprinter build-excel-paging build-excel-to-pdf-libre build-report-test
 
 # Build JWT encoder/decoder tool
 build-jwt:
@@ -28,6 +28,11 @@ build-excel-paging:
 build-excel-to-pdf-libre:
 	@echo "Building Excel to PDF (LibreOffice) tool..."
 	@go build -tags '!windows' -o bin/excel_to_pdf_libre ./test/excel_to_pdf_libre
+
+# Build unified report test tool
+build-report-test:
+	@echo "Building report test tool..."
+	@go build -o bin/report-test ./test/report
 
 # Run all tests
 test:
@@ -175,6 +180,15 @@ test-excel-to-pdf-libre: build-excel-to-pdf-libre test-excel-paging
 	@echo "✓ LibreOffice conversion complete"
 	@ls -lh test-reports/TestReport_libre.pdf
 
+# Test unified report tool with default config
+test-report-tool: build-report-test
+	@echo "Testing unified report tool..."
+	@mkdir -p test-reports
+	@echo "  - Running report-test with default config..."
+	@./bin/report-test -config test/report/config.yaml
+	@echo "✓ Report test complete"
+	@ls -lh test-reports/TestReport.* 2>/dev/null || echo "  (check test-reports/ for output)"
+
 # Run tests with coverage
 test-coverage:
 	@echo "Running tests with coverage..."
@@ -241,15 +255,17 @@ install: build
 help:
 	@echo "Available targets:"
 	@echo "  all                - Run deps, fmt, vet, build, and test (default)"
-	@echo "  build              - Build all binaries (jwt, pdfprinter, excel_paging, excel_to_pdf_libre)"
+	@echo "  build              - Build all binaries (jwt, pdfprinter, excel_paging, excel_to_pdf_libre, report-test)"
 	@echo "  build-jwt          - Build JWT tool only"
 	@echo "  build-pdfprinter   - Build PDF printer only"
 	@echo "  build-excel-paging - Build Excel paging printer only"
 	@echo "  build-excel-to-pdf-libre - Build Excel to PDF (LibreOffice) tool"
+	@echo "  build-report-test  - Build unified report test tool"
 	@echo "  test               - Run all tests"
 	@echo "  test-engine        - Run engine package tests"
 	@echo "  test-qrs           - Run QRS package tests"
 	@echo "  test-report        - Run report package tests"
+	@echo "  test-report-tool   - Run unified report tool with default config (YAML-driven)"
 	@echo "  test-pdf           - Generate test reports (1 xlsx, 1 pdf) using pdfprinter"
 	@echo "  test-pivot         - Generate pivot table PDF report (obj-ids=RfEbJ)"
 	@echo "  test-excel-paging  - Generate paginated Excel report with multiple sheets"
