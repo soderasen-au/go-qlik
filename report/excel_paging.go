@@ -692,7 +692,7 @@ func (p *ExcelPagingPrinter) printTableRows(rows [][]*enigma.NxCell, sheet strin
 }
 
 // printPage prints a single page with all sections
-func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, totalRows int) *util.Result {
+func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, totalRows int, isLastPage bool) *util.Result {
 	sheetName := fmt.Sprintf("page-%d", pageNum)
 	logger := p.logger.With().Str("sheet", sheetName).Int("page", pageNum).Logger()
 
@@ -799,9 +799,38 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 		if res != nil {
 			return res.With("printPageSubtotals")
 		}
+		currentRow++
 	}
 
-	// 9. Set print parameters
+	// 9. Custom Footers (only on last page)
+	if isLastPage && len(p.report.Footers) > 0 {
+		currentRow++ // blank row before footers
+		for fi, footer := range p.report.Footers {
+			labelCell, _ := excelize.CoordinatesToCellName(1, currentRow+fi)
+			p.excel.SetCellStr(sheetName, labelCell, footer.Label)
+
+			textCell, _ := excelize.CoordinatesToCellName(2, currentRow+fi)
+			if text := strings.TrimSpace(footer.Text); strings.HasPrefix(text, "=") {
+				dual, err := p.doc.EvaluateEx(engine.ConnCtx, footer.Text)
+				if err == nil {
+					evalText := dual.Text
+					if evalText == "" && dual.IsNumeric {
+						evalText = fmt.Sprintf("%v", dual.Number)
+					}
+					p.excel.SetCellStr(sheetName, textCell, evalText)
+				} else {
+					p.excel.SetCellStr(sheetName, textCell, footer.Text)
+				}
+			} else {
+				p.excel.SetCellStr(sheetName, textCell, footer.Text)
+			}
+		}
+		currentRow += len(p.report.Footers)
+	}
+
+	_ = currentRow // track final row position for logging
+
+	// 10. Set print parameters
 	pageOpts := &excelize.PageLayoutOptions{
 		Size:        util.Ptr(9), // A4
 		Orientation: util.Ptr("landscape"),
@@ -1008,7 +1037,8 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 		}
 
 		pageRows := allRows[startRow:endRow]
-		if res := p.printPage(pageIdx+1, pageRows, totalRows); res != nil {
+		isLastPage := pageIdx == pageCount-1
+		if res := p.printPage(pageIdx+1, pageRows, totalRows, isLastPage); res != nil {
 			return res.With(fmt.Sprintf("printPage[%d]", pageIdx+1))
 		}
 	}

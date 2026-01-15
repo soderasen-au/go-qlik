@@ -43,6 +43,7 @@ type ReportConfig struct {
 	ExcelPaging     *report.ExcelPagingConfig `yaml:"excel_paging"`
 	ExcelToPDF      *ExcelToPDFConfig         `yaml:"excel_to_pdf"`
 	Headers         []report.CustomHeader     `yaml:"headers"`
+	Footers         []report.CustomHeader     `yaml:"footers"`
 }
 
 type ExcelToPDFConfig struct {
@@ -239,6 +240,7 @@ func main() {
 		Target:                 cfg.Report.Target,
 		TargetIDs:              cfg.Report.TargetIDs,
 		Headers:                cfg.Report.Headers,
+		Footers:                cfg.Report.Footers,
 		OutputCurrentSelection: cfg.Report.OutputSelection,
 		OutputFormat:           util.Ptr(reportFormat),
 		OutputFolder:           util.Ptr(cfg.System.OutputFolder),

@@ -18,7 +18,7 @@ report:
   driver: "built_in"
 
   # Format: xlsx, paged_xlsx, pdf, csv, tsv
-  format: "xlsx"
+  format: "paged_xlsx"
 
   # Report metadata
   name: "TestReport"
@@ -56,11 +56,11 @@ report:
 
   # Excel Paging Configuration (only used when format: paged_xlsx)
   excel_paging:
-    rows_per_page: 50
+    rows_per_page: 15
     report_title: "Paginated Sales Report"
     total_records_label: "Total Records Found"
-    show_column_numbers: false
-    show_subtotals: false
+    show_column_numbers: true
+    show_subtotals: true
     header_groups:
       - name: "Sales Metrics"
         start: 2
@@ -68,11 +68,11 @@ report:
 
   # Excel to PDF Conversion (optional, runs after Excel generation)
   # Uncomment to enable automatic Excel-to-PDF conversion
-  # excel_to_pdf:
-  #   libreoffice_bin: "libreoffice"   # Path to LibreOffice binary
-  #   max_concurrent: 2                 # Max concurrent conversions
-  #   timeout: 30                       # Timeout in seconds
-  #   profile: ""                       # Optional profile name for worker pool
+  excel_to_pdf:
+    libreoffice_bin: "libreoffice"   # Path to LibreOffice binary
+    max_concurrent: 2                 # Max concurrent conversions
+    timeout: 30                       # Timeout in seconds
+    profile: ""                       # Optional profile name for worker pool
 
 # -----------------------------------------------------------------------------
 # CONFIGURATION EXAMPLES FOR DIFFERENT DRIVERS

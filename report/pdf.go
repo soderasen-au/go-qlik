@@ -514,6 +514,42 @@ func (p *PdfReportPrinter) printCustomHeaders(doc *enigma.Doc, headers []CustomH
 	return nil
 }
 
+// Print custom footers (at end of table data)
+func (p *PdfReportPrinter) printCustomFooters(doc *enigma.Doc, footers []CustomHeader, logger *zerolog.Logger) *util.Result {
+	logger.Info().Msg("printing custom footers")
+
+	p.pdf.Ln(3) // Add spacing before footers
+
+	for _, footer := range footers {
+		// Check page break
+		if p.pdf.GetY() > p.pageHeight-PDF_MARGIN_TOP-PDF_LINE_HEIGHT*2 {
+			p.pdf.AddPage()
+		}
+
+		text := footer.Text
+		if t := strings.TrimSpace(text); strings.HasPrefix(t, "=") {
+			dual, err := doc.EvaluateEx(engine.ConnCtx, footer.Text)
+			if err != nil {
+				logger.Err(err).Msg("EvaluateEx")
+				return util.Error("EvaluateEx", err)
+			}
+			text = dual.Text
+			if text == "" && dual.IsNumeric {
+				text = fmt.Sprintf("%v", dual.Number)
+			}
+		}
+
+		p.pdf.SetFont("Arial", "B", PDF_FONT_SIZE)
+		p.pdf.CellFormat(50, PDF_LINE_HEIGHT, footer.Label, "1", 0, "", false, 0, "")
+		p.pdf.SetFont("Arial", "", PDF_FONT_SIZE)
+		p.pdf.CellFormat(0, PDF_LINE_HEIGHT, text, "1", 0, "", false, 0, "")
+		p.pdf.Ln(-1)
+		p.printedRows++
+	}
+
+	return nil
+}
+
 // Print sheet header (combines current selection and custom headers)
 func (p *PdfReportPrinter) printSheetHeader(r Report, doc *enigma.Doc, logger *zerolog.Logger) *util.Result {
 	if r.OutputCurrentSelection {
@@ -828,6 +864,13 @@ func (p *PdfReportPrinter) printStackObject(r Report, objId string, logger *zero
 		p.printedRows++
 	}
 
+	// Print footers after table data
+	if len(r.Footers) > 0 {
+		if res := p.printCustomFooters(r.Doc, r.Footers, logger); res != nil {
+			return res.With("printCustomFooters")
+		}
+	}
+
 	return nil
 }
 
@@ -1034,6 +1077,13 @@ func (p *PdfReportPrinter) printPivotObject(r Report, objId string, obj *enigma.
 
 			p.pdf.Ln(-1)
 			p.printedRows++
+		}
+	}
+
+	// Print footers after table data
+	if len(r.Footers) > 0 {
+		if res := p.printCustomFooters(r.Doc, r.Footers, &logger); res != nil {
+			return res.With("printCustomFooters")
 		}
 	}
 

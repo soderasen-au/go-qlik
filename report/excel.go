@@ -241,6 +241,58 @@ func (p *ExcelReportPrinter) printCustomHeaders(doc *enigma.Doc, headers []Custo
 	return &resRect, nil
 }
 
+func (p *ExcelReportPrinter) printCustomFooters(doc *enigma.Doc, footers []CustomHeader, sheet string, excel *excelize.File, rect enigma.Rect, _logger *zerolog.Logger) (*enigma.Rect, *util.Result) {
+	if excel == nil {
+		return nil, util.MsgError("printCustomFooters", "nil excel")
+	}
+	logger := _logger.With().Str("print", "CustomFooters").Logger()
+	resRect := rect
+	resRect.Height = 0
+	resRect.Width = 0
+
+	r0 := rect.Top
+	c0 := rect.Left
+	for fi, footer := range footers {
+		labelCellName, err := excelize.CoordinatesToCellName(c0, r0+fi)
+		cellLogger := logger.With().Str("coor", fmt.Sprintf("(%d, %d)", r0+fi, c0)).Str("name", labelCellName).Logger()
+		if err != nil {
+			cellLogger.Err(err).Msg("CoordinatesToCellName")
+			return nil, util.Error("CoordinatesToCellName", err)
+		}
+		cellLogger.Debug().Msgf("print label cell: %s", footer.Label)
+		excel.SetCellStr(sheet, labelCellName, footer.Label)
+
+		textCellName, err := excelize.CoordinatesToCellName(c0+1, r0+fi)
+		cellLogger = logger.With().Str("coor", fmt.Sprintf("(%d, %d)", r0+fi, c0+1)).Str("name", textCellName).Logger()
+		if err != nil {
+			cellLogger.Err(err).Msg("CoordinatesToCellName")
+			return nil, util.Error("CoordinatesToCellName", err)
+		}
+		cellLogger.Debug().Msgf("print text cell: %s", footer.Text)
+		if text := strings.TrimSpace(footer.Text); strings.HasPrefix(text, "=") {
+			dual, err := doc.EvaluateEx(engine.ConnCtx, footer.Text)
+			if err != nil {
+				cellLogger.Err(err).Msg("EvaluateEx")
+				return nil, util.Error("EvaluateEx", err)
+			}
+
+			text = dual.Text
+			if text == "" && dual.IsNumeric {
+				text = fmt.Sprintf("%v", dual.Number)
+			}
+			cellLogger.Debug().Msgf("Evaluate: %s => %v, text: %s", footer.Text, dual, text)
+			excel.SetCellStr(sheet, textCellName, text)
+		} else {
+			excel.SetCellStr(sheet, textCellName, footer.Text)
+		}
+	}
+
+	resRect.Height = len(footers)
+	resRect.Width = 2
+
+	return &resRect, nil
+}
+
 func (p *ExcelReportPrinter) printSheetHeader(r Report, doc *enigma.Doc, sheetName string, excel *excelize.File, rect enigma.Rect, _logger *zerolog.Logger) (*enigma.Rect, *util.Result) {
 	resRect := rect
 	resRect.Height = 0
@@ -1095,6 +1147,19 @@ func (p *ExcelReportPrinter) printStackObject(doc *enigma.Doc, r Report, objId, 
 	}
 	resRect.Height = sz.Cy
 	resRect.Width = sz.Cx
+
+	// Print footers after table data
+	if len(r.Footers) > 0 {
+		footerRect := enigma.Rect{Top: resRect.Top + resRect.Height + 1, Left: resRect.Left}
+		cfRect, res := p.printCustomFooters(doc, r.Footers, sheetName, excel, footerRect, &logger)
+		if res != nil {
+			logger.Err(res).Msg("printCustomFooters")
+			return nil, res.With("printCustomFooters")
+		}
+		resRect.Height += cfRect.Height + 1
+		totalRows += cfRect.Height + 1
+	}
+
 	totalRows += resRect.Height
 	reportResult, res := p.GetReportResult(*r.ID)
 	if res != nil {
@@ -1267,6 +1332,19 @@ func (p *ExcelReportPrinter) printPivotObject(doc *enigma.Doc, r Report, objId, 
 
 	resRect.Height = sz.Cy
 	resRect.Width = sz.Cx
+
+	// Print footers after table data
+	if len(r.Footers) > 0 {
+		footerRect := enigma.Rect{Top: resRect.Top + resRect.Height + 1, Left: resRect.Left}
+		cfRect, res := p.printCustomFooters(doc, r.Footers, sheetName, excel, footerRect, &logger)
+		if res != nil {
+			logger.Err(res).Msg("printCustomFooters")
+			return nil, res.With("printCustomFooters")
+		}
+		resRect.Height += cfRect.Height + 1
+		totalRows += cfRect.Height + 1
+	}
+
 	totalRows += resRect.Height
 	reportResult, res := p.GetReportResult(*r.ID)
 	if res != nil {
