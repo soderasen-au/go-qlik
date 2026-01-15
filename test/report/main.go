@@ -43,7 +43,11 @@ type ReportConfig struct {
 	ExcelPaging     *report.ExcelPagingConfig `yaml:"excel_paging"`
 	ExcelToPDF      *ExcelToPDFConfig         `yaml:"excel_to_pdf"`
 	Headers         []report.CustomHeader     `yaml:"headers"`
+	HeadersOffset   *enigma.Rect              `yaml:"headers_offset"`
 	Footers         []report.CustomHeader     `yaml:"footers"`
+	FootersOffset   *enigma.Rect              `yaml:"footers_offset"`
+	Legends         []report.Legend           `yaml:"legends"`
+	LegendOffset    *enigma.Rect              `yaml:"legend_offset"`
 }
 
 type ExcelToPDFConfig struct {
@@ -240,7 +244,11 @@ func main() {
 		Target:                 cfg.Report.Target,
 		TargetIDs:              cfg.Report.TargetIDs,
 		Headers:                cfg.Report.Headers,
+		HeadersOffset:          cfg.Report.HeadersOffset,
 		Footers:                cfg.Report.Footers,
+		FootersOffset:          cfg.Report.FootersOffset,
+		Legends:                cfg.Report.Legends,
+		LegendOffset:           cfg.Report.LegendOffset,
 		OutputCurrentSelection: cfg.Report.OutputSelection,
 		OutputFormat:           util.Ptr(reportFormat),
 		OutputFolder:           util.Ptr(cfg.System.OutputFolder),

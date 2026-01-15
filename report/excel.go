@@ -241,6 +241,68 @@ func (p *ExcelReportPrinter) printCustomHeaders(doc *enigma.Doc, headers []Custo
 	return &resRect, nil
 }
 
+// printLegends prints legends right-aligned with the table
+// rect.Left should be the column where the table's right-most data column ends
+// rect.Top should be the starting row for legends
+// Legends are printed such that their right-most column aligns with the table's right-most column
+func (p *ExcelReportPrinter) printLegends(doc *enigma.Doc, legends []Legend, sheet string, excel *excelize.File, rect enigma.Rect, _logger *zerolog.Logger) (*enigma.Rect, *util.Result) {
+	if excel == nil {
+		return nil, util.MsgError("printLegends", "nil excel")
+	}
+	logger := _logger.With().Str("print", "Legends").Logger()
+	resRect := rect
+	resRect.Height = 0
+	resRect.Width = 0
+
+	// Legends occupy 2 columns (label + text)
+	// rect.Left is the right-most column of the table
+	// So legend's label column starts at (rect.Left - 1) and text column is at rect.Left
+	legendWidth := 2
+	labelCol := rect.Left - legendWidth + 1 // label is at left column
+	textCol := rect.Left                    // text is at right column
+
+	r0 := rect.Top
+	for li, legend := range legends {
+		labelCellName, err := excelize.CoordinatesToCellName(labelCol, r0+li)
+		cellLogger := logger.With().Str("coor", fmt.Sprintf("(%d, %d)", r0+li, labelCol)).Str("name", labelCellName).Logger()
+		if err != nil {
+			cellLogger.Err(err).Msg("CoordinatesToCellName")
+			return nil, util.Error("CoordinatesToCellName", err)
+		}
+		cellLogger.Debug().Msgf("print legend label cell: %s", legend.Label)
+		excel.SetCellStr(sheet, labelCellName, legend.Label)
+
+		textCellName, err := excelize.CoordinatesToCellName(textCol, r0+li)
+		cellLogger = logger.With().Str("coor", fmt.Sprintf("(%d, %d)", r0+li, textCol)).Str("name", textCellName).Logger()
+		if err != nil {
+			cellLogger.Err(err).Msg("CoordinatesToCellName")
+			return nil, util.Error("CoordinatesToCellName", err)
+		}
+		cellLogger.Debug().Msgf("print legend text cell: %s", legend.Text)
+		if text := strings.TrimSpace(legend.Text); strings.HasPrefix(text, "=") {
+			dual, err := doc.EvaluateEx(engine.ConnCtx, legend.Text)
+			if err != nil {
+				cellLogger.Err(err).Msg("EvaluateEx")
+				return nil, util.Error("EvaluateEx", err)
+			}
+
+			text = dual.Text
+			if text == "" && dual.IsNumeric {
+				text = fmt.Sprintf("%v", dual.Number)
+			}
+			cellLogger.Debug().Msgf("Evaluate: %s => %v, text: %s", legend.Text, dual, text)
+			excel.SetCellStr(sheet, textCellName, text)
+		} else {
+			excel.SetCellStr(sheet, textCellName, legend.Text)
+		}
+	}
+
+	resRect.Height = len(legends)
+	resRect.Width = legendWidth
+
+	return &resRect, nil
+}
+
 func (p *ExcelReportPrinter) printCustomFooters(doc *enigma.Doc, footers []CustomHeader, sheet string, excel *excelize.File, rect enigma.Rect, _logger *zerolog.Logger) (*enigma.Rect, *util.Result) {
 	if excel == nil {
 		return nil, util.MsgError("printCustomFooters", "nil excel")
@@ -309,16 +371,25 @@ func (p *ExcelReportPrinter) printSheetHeader(r Report, doc *enigma.Doc, sheetNa
 	}
 
 	if len(r.Headers) > 0 {
-		rect.Top = resRect.Top + resRect.Height
-		chRect, res := p.printCustomHeaders(doc, r.Headers, sheetName, excel, rect, _logger)
+		headerRect := enigma.Rect{Top: resRect.Top + resRect.Height, Left: rect.Left}
+		// Apply HeadersOffset if specified
+		if r.HeadersOffset != nil {
+			headerRect.Top += r.HeadersOffset.Top
+			headerRect.Left += r.HeadersOffset.Left
+		}
+		chRect, res := p.printCustomHeaders(doc, r.Headers, sheetName, excel, headerRect, _logger)
 		if res != nil {
-			_logger.Err(res).Msg("printCurrentSelection")
-			return nil, res.With("printCurrentSelection")
+			_logger.Err(res).Msg("printCustomHeaders")
+			return nil, res.With("printCustomHeaders")
 		}
 		if resRect.Width < 1 {
 			resRect.Width = chRect.Width
 		}
 		resRect.Height += chRect.Height
+		// Account for HeadersOffset in total height
+		if r.HeadersOffset != nil {
+			resRect.Height += r.HeadersOffset.Top
+		}
 	}
 
 	return &resRect, nil
@@ -1052,6 +1123,28 @@ func (p *ExcelReportPrinter) printStackObject(doc *enigma.Doc, r Report, objId, 
 		sheetName = useSheetName
 	}
 
+	// Print legends (right-aligned with table) before table header
+	// We need to know table width first, so calculate it from layout
+	tableWidth := objLayout.HyperCube.Size.Cx
+	if len(r.Legends) > 0 {
+		// Right-most column of the table = rect.Left + tableWidth - 1
+		rightMostCol := rect.Left + tableWidth - 1
+		legendRect := enigma.Rect{Top: rect.Top, Left: rightMostCol}
+		// Apply LegendOffset if specified
+		if r.LegendOffset != nil {
+			legendRect.Top += r.LegendOffset.Top
+			legendRect.Left += r.LegendOffset.Left
+		}
+		lgRect, res := p.printLegends(doc, r.Legends, sheetName, excel, legendRect, &logger)
+		if res != nil {
+			logger.Err(res).Msg("printLegends")
+			return nil, res.With("printLegends")
+		}
+		// Move table start down to account for legends
+		rect.Top += lgRect.Height + 1
+		totalRows += lgRect.Height + 1
+	}
+
 	headerRect, cube2report, res := p.printObjectHeader(sheetName, objLayout, excel, rect, r, &logger)
 	if res != nil {
 		logger.Err(res).Msg("printObjectHeader failed")
@@ -1151,12 +1244,20 @@ func (p *ExcelReportPrinter) printStackObject(doc *enigma.Doc, r Report, objId, 
 	// Print footers after table data
 	if len(r.Footers) > 0 {
 		footerRect := enigma.Rect{Top: resRect.Top + resRect.Height + 1, Left: resRect.Left}
+		// Apply FootersOffset if specified
+		if r.FootersOffset != nil {
+			footerRect.Top += r.FootersOffset.Top
+			footerRect.Left += r.FootersOffset.Left
+		}
 		cfRect, res := p.printCustomFooters(doc, r.Footers, sheetName, excel, footerRect, &logger)
 		if res != nil {
 			logger.Err(res).Msg("printCustomFooters")
 			return nil, res.With("printCustomFooters")
 		}
 		resRect.Height += cfRect.Height + 1
+		if r.FootersOffset != nil {
+			resRect.Height += r.FootersOffset.Top
+		}
 		totalRows += cfRect.Height + 1
 	}
 
@@ -1263,6 +1364,28 @@ func (p *ExcelReportPrinter) printPivotObject(doc *enigma.Doc, r Report, objId, 
 		sheetName = useSheetName
 	}
 
+	// Print legends (right-aligned with table) before table header
+	// Pivot table width = data columns + left dimensions
+	tableWidth := pivotSz.Cx + objLayout.HyperCube.NoOfLeftDims
+	if len(r.Legends) > 0 {
+		// Right-most column of the table = rect.Left + tableWidth - 1
+		rightMostCol := rect.Left + tableWidth - 1
+		legendRect := enigma.Rect{Top: rect.Top, Left: rightMostCol}
+		// Apply LegendOffset if specified
+		if r.LegendOffset != nil {
+			legendRect.Top += r.LegendOffset.Top
+			legendRect.Left += r.LegendOffset.Left
+		}
+		lgRect, res := p.printLegends(doc, r.Legends, sheetName, excel, legendRect, &logger)
+		if res != nil {
+			logger.Err(res).Msg("printLegends")
+			return nil, res.With("printLegends")
+		}
+		// Move table start down to account for legends
+		rect.Top += lgRect.Height + 1
+		totalRows += lgRect.Height + 1
+	}
+
 	headerRect, res := p.printPivotObjectHeader(sheetName, objLayout, excel, rect, &logger)
 	if res != nil {
 		logger.Err(res).Msg("printObjectHeader failed")
@@ -1336,12 +1459,20 @@ func (p *ExcelReportPrinter) printPivotObject(doc *enigma.Doc, r Report, objId, 
 	// Print footers after table data
 	if len(r.Footers) > 0 {
 		footerRect := enigma.Rect{Top: resRect.Top + resRect.Height + 1, Left: resRect.Left}
+		// Apply FootersOffset if specified
+		if r.FootersOffset != nil {
+			footerRect.Top += r.FootersOffset.Top
+			footerRect.Left += r.FootersOffset.Left
+		}
 		cfRect, res := p.printCustomFooters(doc, r.Footers, sheetName, excel, footerRect, &logger)
 		if res != nil {
 			logger.Err(res).Msg("printCustomFooters")
 			return nil, res.With("printCustomFooters")
 		}
 		resRect.Height += cfRect.Height + 1
+		if r.FootersOffset != nil {
+			resRect.Height += r.FootersOffset.Top
+		}
 		totalRows += cfRect.Height + 1
 	}
 

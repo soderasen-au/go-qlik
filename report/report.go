@@ -89,6 +89,11 @@ type CustomHeader struct {
 	Text  string `json:"text,omitempty"`
 }
 
+type Legend struct {
+	Label string `json:"label,omitempty"`
+	Text  string `json:"text,omitempty"`
+}
+
 type ColumnHeaderFormat struct {
 	Order        int     `json:"order"`
 	Label        string  `json:"label"`
@@ -131,6 +136,7 @@ type Report struct {
 
 	// layout
 	Headers                []CustomHeader                `json:"headers,omitempty" yaml:"headers,omitempty" bson:"headers,omitempty"`
+	HeadersOffset          *enigma.Rect                  `json:"headers_offset,omitempty" yaml:"headers_offset,omitempty" bson:"headers_offset,omitempty"`
 	OptionalTargetTitles   map[string]string             `json:"optional_target_titles,omitempty" yaml:"optional_target_titles,omitempty" bson:"optional_target_titles,omitempty"`
 	OutputCurrentSelection bool                          `json:"output_current_selection,omitempty" yaml:"output_current_selection,omitempty" bson:"output_current_selection,omitempty"`
 	CurrentSelectionOrder  map[string]int                `json:"current_selection_order" yaml:"current_selection_order" bson:"current_selection_order"`
@@ -138,6 +144,9 @@ type Report struct {
 	BoldHeader             bool                          `json:"bold_header,omitempty" yaml:"bold_header,omitempty" bson:"bold_header,omitempty"`
 	AllBorders             bool                          `json:"all_borders,omitempty" yaml:"all_borders,omitempty" bson:"all_borders,omitempty"`
 	Footers                []CustomHeader                `json:"footers,omitempty" yaml:"footers,omitempty" bson:"footers,omitempty"`
+	FootersOffset          *enigma.Rect                  `json:"footers_offset,omitempty" yaml:"footers_offset,omitempty" bson:"footers_offset,omitempty"`
+	Legends                []Legend                      `json:"legends,omitempty" yaml:"legends,omitempty" bson:"legends,omitempty"`
+	LegendOffset           *enigma.Rect                  `json:"legend_offset,omitempty" yaml:"legend_offset,omitempty" bson:"legend_offset,omitempty"`
 
 	// output
 	Driver               *string           `json:"driver,omitempty" yaml:"driver,omitempty" bson:"driver,omitempty"`

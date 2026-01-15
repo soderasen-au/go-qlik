@@ -480,13 +480,29 @@ func (p *PdfReportPrinter) printCurrentSelection(r Report, doc *enigma.Doc, logg
 }
 
 // Print custom headers
-func (p *PdfReportPrinter) printCustomHeaders(doc *enigma.Doc, headers []CustomHeader, logger *zerolog.Logger) *util.Result {
+// offset: Top and Left are in mm (pixels for PDF)
+func (p *PdfReportPrinter) printCustomHeaders(doc *enigma.Doc, headers []CustomHeader, offset *enigma.Rect, logger *zerolog.Logger) *util.Result {
 	logger.Info().Msg("printing custom headers")
+
+	// Apply offset if specified (in mm for PDF)
+	if offset != nil {
+		if offset.Top > 0 {
+			p.pdf.Ln(float64(offset.Top))
+		}
+		if offset.Left > 0 {
+			p.pdf.SetX(PDF_MARGIN_LEFT + float64(offset.Left))
+		}
+	}
 
 	for _, header := range headers {
 		// Check page break
 		if p.pdf.GetY() > p.pageHeight-PDF_MARGIN_TOP-PDF_LINE_HEIGHT*2 {
 			p.pdf.AddPage()
+		}
+
+		// Apply left offset for each row if specified
+		if offset != nil && offset.Left > 0 {
+			p.pdf.SetX(PDF_MARGIN_LEFT + float64(offset.Left))
 		}
 
 		text := header.Text
@@ -515,15 +531,31 @@ func (p *PdfReportPrinter) printCustomHeaders(doc *enigma.Doc, headers []CustomH
 }
 
 // Print custom footers (at end of table data)
-func (p *PdfReportPrinter) printCustomFooters(doc *enigma.Doc, footers []CustomHeader, logger *zerolog.Logger) *util.Result {
+// offset: Top and Left are in mm (pixels for PDF)
+func (p *PdfReportPrinter) printCustomFooters(doc *enigma.Doc, footers []CustomHeader, offset *enigma.Rect, logger *zerolog.Logger) *util.Result {
 	logger.Info().Msg("printing custom footers")
 
 	p.pdf.Ln(3) // Add spacing before footers
+
+	// Apply offset if specified (in mm for PDF)
+	if offset != nil {
+		if offset.Top > 0 {
+			p.pdf.Ln(float64(offset.Top))
+		}
+		if offset.Left > 0 {
+			p.pdf.SetX(PDF_MARGIN_LEFT + float64(offset.Left))
+		}
+	}
 
 	for _, footer := range footers {
 		// Check page break
 		if p.pdf.GetY() > p.pageHeight-PDF_MARGIN_TOP-PDF_LINE_HEIGHT*2 {
 			p.pdf.AddPage()
+		}
+
+		// Apply left offset for each row if specified
+		if offset != nil && offset.Left > 0 {
+			p.pdf.SetX(PDF_MARGIN_LEFT + float64(offset.Left))
 		}
 
 		text := footer.Text
@@ -550,6 +582,67 @@ func (p *PdfReportPrinter) printCustomFooters(doc *enigma.Doc, footers []CustomH
 	return nil
 }
 
+// Print legends (right-aligned with table)
+// tableWidth is the total width of the table columns in mm
+// offset: Top and Left are in mm
+func (p *PdfReportPrinter) printLegends(doc *enigma.Doc, legends []Legend, tableWidth float64, offset *enigma.Rect, logger *zerolog.Logger) *util.Result {
+	logger.Info().Msg("printing legends")
+
+	// Calculate right-aligned position
+	// Legends occupy 2 cells: label (50mm) + text (rest of available width)
+	labelWidth := 50.0
+	textWidth := tableWidth - labelWidth
+	if textWidth < 50.0 {
+		textWidth = 50.0
+	}
+	legendTotalWidth := labelWidth + textWidth
+
+	// Right-align: start X = page width - right margin - legend total width
+	startX := p.pageWidth - PDF_MARGIN_RIGHT - legendTotalWidth
+
+	// Apply offset if specified (in mm for PDF)
+	if offset != nil {
+		if offset.Top > 0 {
+			p.pdf.Ln(float64(offset.Top))
+		}
+		if offset.Left > 0 {
+			startX += float64(offset.Left)
+		}
+	}
+
+	for _, legend := range legends {
+		// Check page break
+		if p.pdf.GetY() > p.pageHeight-PDF_MARGIN_TOP-PDF_LINE_HEIGHT*2 {
+			p.pdf.AddPage()
+		}
+
+		p.pdf.SetX(startX)
+
+		text := legend.Text
+		if t := strings.TrimSpace(text); strings.HasPrefix(t, "=") {
+			dual, err := doc.EvaluateEx(engine.ConnCtx, legend.Text)
+			if err != nil {
+				logger.Err(err).Msg("EvaluateEx")
+				return util.Error("EvaluateEx", err)
+			}
+			text = dual.Text
+			if text == "" && dual.IsNumeric {
+				text = fmt.Sprintf("%v", dual.Number)
+			}
+		}
+
+		p.pdf.SetFont("Arial", "B", PDF_FONT_SIZE)
+		p.pdf.CellFormat(labelWidth, PDF_LINE_HEIGHT, legend.Label, "1", 0, "", false, 0, "")
+		p.pdf.SetFont("Arial", "", PDF_FONT_SIZE)
+		p.pdf.CellFormat(textWidth, PDF_LINE_HEIGHT, text, "1", 0, "", false, 0, "")
+		p.pdf.Ln(-1)
+		p.printedRows++
+	}
+
+	p.pdf.Ln(3) // Add spacing
+	return nil
+}
+
 // Print sheet header (combines current selection and custom headers)
 func (p *PdfReportPrinter) printSheetHeader(r Report, doc *enigma.Doc, logger *zerolog.Logger) *util.Result {
 	if r.OutputCurrentSelection {
@@ -559,7 +652,7 @@ func (p *PdfReportPrinter) printSheetHeader(r Report, doc *enigma.Doc, logger *z
 	}
 
 	if len(r.Headers) > 0 {
-		if res := p.printCustomHeaders(doc, r.Headers, logger); res != nil {
+		if res := p.printCustomHeaders(doc, r.Headers, r.HeadersOffset, logger); res != nil {
 			return res.With("printCustomHeaders")
 		}
 	}
@@ -770,6 +863,19 @@ func (p *PdfReportPrinter) printStackObject(r Report, objId string, logger *zero
 	// Calculate column widths
 	p.calculateColumnWidths(objLayout)
 
+	// Calculate total table width for legends
+	tableWidth := 0.0
+	for _, w := range p.colWidths {
+		tableWidth += w
+	}
+
+	// Print legends (right-aligned with table) before table header
+	if len(r.Legends) > 0 {
+		if res := p.printLegends(r.Doc, r.Legends, tableWidth, r.LegendOffset, logger); res != nil {
+			return res.With("printLegends")
+		}
+	}
+
 	// Print header
 	if res := p.printObjectHeader(objLayout, r, logger); res != nil {
 		return res.With("printObjectHeader")
@@ -866,7 +972,7 @@ func (p *PdfReportPrinter) printStackObject(r Report, objId string, logger *zero
 
 	// Print footers after table data
 	if len(r.Footers) > 0 {
-		if res := p.printCustomFooters(r.Doc, r.Footers, logger); res != nil {
+		if res := p.printCustomFooters(r.Doc, r.Footers, r.FootersOffset, logger); res != nil {
 			return res.With("printCustomFooters")
 		}
 	}
@@ -1002,6 +1108,17 @@ func (p *PdfReportPrinter) printPivotObject(r Report, objId string, obj *enigma.
 		objLayout.HyperCube.PivotDataPages = _dataPages
 	}
 
+	// Calculate approximate table width for legends (left dims + data columns)
+	// Each left dim uses PDF_MAX_COL_WIDTH, each data column uses PDF_MIN_COL_WIDTH
+	tableWidth := float64(noLeftDim)*PDF_MAX_COL_WIDTH + float64(objLayout.HyperCube.Size.Cx)*PDF_MIN_COL_WIDTH
+
+	// Print legends (right-aligned with table) before table header
+	if len(r.Legends) > 0 {
+		if res := p.printLegends(r.Doc, r.Legends, tableWidth, r.LegendOffset, &logger); res != nil {
+			return res.With("printLegends")
+		}
+	}
+
 	// Print pivot header (left dimension headers + top dimension hierarchy)
 	if res := p.printPivotObjectHeader(objLayout, r, &logger); res != nil {
 		return res.With("printPivotObjectHeader")
@@ -1082,7 +1199,7 @@ func (p *PdfReportPrinter) printPivotObject(r Report, objId string, obj *enigma.
 
 	// Print footers after table data
 	if len(r.Footers) > 0 {
-		if res := p.printCustomFooters(r.Doc, r.Footers, &logger); res != nil {
+		if res := p.printCustomFooters(r.Doc, r.Footers, r.FootersOffset, &logger); res != nil {
 			return res.With("printCustomFooters")
 		}
 	}

@@ -46,6 +46,10 @@ report:
       text: "Report Test Tool"
     - label: "App ID"
       text: "0569bf97-812d-455b-9fce-83c7bb6a018d"
+  # Headers offset (optional, cells for Excel, mm for PDF)
+  headers_offset:
+    left: 3
+    top: 0
 
   # Custom footers (printed after table data)
   footers:
@@ -53,6 +57,22 @@ report:
       text: "=Today()"
     - label: "Disclaimer"
       text: "This report is auto-generated for internal use only."
+  # Footers offset (optional, cells for Excel, mm for PDF)
+  footers_offset:
+    left: 1
+    top: 1
+
+  # Legends (printed right-aligned with table, above table header)
+  legends:
+    - label: "Report Version"
+      text: "1.0"
+    - label: "Generated"
+      text: "=Today()"
+
+  # Legends offset (optional, cells for Excel, mm for PDF)
+  # legend_offset:
+  #   left: 0
+  #   top: 0
 
   # Excel Paging Configuration (only used when format: paged_xlsx)
   excel_paging:

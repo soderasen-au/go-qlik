@@ -729,12 +729,18 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 
 	// 3. Custom Headers
 	if len(p.report.Headers) > 0 {
-		rect := enigma.Rect{Top: currentRow, Left: 1}
+		// Apply HeadersOffset if specified
+		headerRowStart := currentRow
+		headerColStart := 1
+		if p.report.HeadersOffset != nil {
+			headerRowStart += p.report.HeadersOffset.Top
+			headerColStart += p.report.HeadersOffset.Left
+		}
 		for hi, header := range p.report.Headers {
-			labelCell, _ := excelize.CoordinatesToCellName(1, currentRow+hi)
+			labelCell, _ := excelize.CoordinatesToCellName(headerColStart, headerRowStart+hi)
 			p.excel.SetCellStr(sheetName, labelCell, header.Label)
 
-			textCell, _ := excelize.CoordinatesToCellName(2, currentRow+hi)
+			textCell, _ := excelize.CoordinatesToCellName(headerColStart+1, headerRowStart+hi)
 			if text := strings.TrimSpace(header.Text); strings.HasPrefix(text, "=") {
 				dual, err := p.doc.EvaluateEx(engine.ConnCtx, header.Text)
 				if err == nil {
@@ -751,10 +757,50 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 			}
 		}
 		currentRow += len(p.report.Headers) + 1 // +1 for blank row
-		_ = rect
+		if p.report.HeadersOffset != nil {
+			currentRow += p.report.HeadersOffset.Top
+		}
 	}
 
-	// 4. Total Records
+	// 4. Legends (right-aligned with table)
+	if len(p.report.Legends) > 0 {
+		// Legends occupy 2 columns (label + text)
+		// Table starts at column 1, so right-most column = colCount
+		legendWidth := 2
+		legendColStart := colCount - legendWidth + 1 // label column
+		legendRowStart := currentRow
+		// Apply LegendOffset if specified
+		if p.report.LegendOffset != nil {
+			legendRowStart += p.report.LegendOffset.Top
+			legendColStart += p.report.LegendOffset.Left
+		}
+		for li, legend := range p.report.Legends {
+			labelCell, _ := excelize.CoordinatesToCellName(legendColStart, legendRowStart+li)
+			p.excel.SetCellStr(sheetName, labelCell, legend.Label)
+
+			textCell, _ := excelize.CoordinatesToCellName(legendColStart+1, legendRowStart+li)
+			if text := strings.TrimSpace(legend.Text); strings.HasPrefix(text, "=") {
+				dual, err := p.doc.EvaluateEx(engine.ConnCtx, legend.Text)
+				if err == nil {
+					evalText := dual.Text
+					if evalText == "" && dual.IsNumeric {
+						evalText = fmt.Sprintf("%v", dual.Number)
+					}
+					p.excel.SetCellStr(sheetName, textCell, evalText)
+				} else {
+					p.excel.SetCellStr(sheetName, textCell, legend.Text)
+				}
+			} else {
+				p.excel.SetCellStr(sheetName, textCell, legend.Text)
+			}
+		}
+		currentRow += len(p.report.Legends) + 1 // +1 for blank row
+		if p.report.LegendOffset != nil {
+			currentRow += p.report.LegendOffset.Top
+		}
+	}
+
+	// 5. Total Records
 	{
 		rect := enigma.Rect{Top: currentRow, Left: 1}
 		_, res := p.printTotalRecords(totalRows, sheetName, rect)
@@ -764,7 +810,7 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 		currentRow += 2 // +1 for the row, +1 for blank row
 	}
 
-	// 5. Table Header
+	// 6. Table Header
 	headerRect := enigma.Rect{Top: currentRow, Left: 1}
 	{
 		hRect, res := p.printTableHeader(sheetName, headerRect)
@@ -805,11 +851,18 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 	// 9. Custom Footers (only on last page)
 	if isLastPage && len(p.report.Footers) > 0 {
 		currentRow++ // blank row before footers
+		// Apply FootersOffset if specified
+		footerRowStart := currentRow
+		footerColStart := 1
+		if p.report.FootersOffset != nil {
+			footerRowStart += p.report.FootersOffset.Top
+			footerColStart += p.report.FootersOffset.Left
+		}
 		for fi, footer := range p.report.Footers {
-			labelCell, _ := excelize.CoordinatesToCellName(1, currentRow+fi)
+			labelCell, _ := excelize.CoordinatesToCellName(footerColStart, footerRowStart+fi)
 			p.excel.SetCellStr(sheetName, labelCell, footer.Label)
 
-			textCell, _ := excelize.CoordinatesToCellName(2, currentRow+fi)
+			textCell, _ := excelize.CoordinatesToCellName(footerColStart+1, footerRowStart+fi)
 			if text := strings.TrimSpace(footer.Text); strings.HasPrefix(text, "=") {
 				dual, err := p.doc.EvaluateEx(engine.ConnCtx, footer.Text)
 				if err == nil {
@@ -826,6 +879,9 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 			}
 		}
 		currentRow += len(p.report.Footers)
+		if p.report.FootersOffset != nil {
+			currentRow += p.report.FootersOffset.Top
+		}
 	}
 
 	_ = currentRow // track final row position for logging
