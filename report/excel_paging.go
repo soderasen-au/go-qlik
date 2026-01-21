@@ -30,6 +30,7 @@ type ExcelPagingConfig struct {
 	TotalRecordsLabel string        `json:"total_records_label" yaml:"total_records_label"`
 	ShowColumnNumbers bool          `json:"show_column_numbers" yaml:"show_column_numbers"`
 	ShowSubtotals     bool          `json:"show_subtotals" yaml:"show_subtotals"`
+	ShowGrandTotals   bool          `json:"show_grand_totals" yaml:"show_grand_totals"`
 	HeaderGroups      []HeaderGroup `json:"header_groups" yaml:"header_groups"`
 }
 
@@ -289,27 +290,11 @@ func (p *ExcelPagingPrinter) printColumnNumbers(colCount int, sheet string, rect
 	return &resRect, nil
 }
 
-// printPageSubtotals prints subtotals for numeric columns
+// printPageSubtotals prints subtotals for numeric columns with column number formats
 func (p *ExcelPagingPrinter) printPageSubtotals(subtotals []float64, isNumeric []bool, sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
 	resRect := rect
 	resRect.Height = 1
 	resRect.Width = len(subtotals)
-
-	boldStyle := &excelize.Style{
-		Font: &excelize.Font{Bold: true},
-		Border: []excelize.Border{
-			{Type: "top", Color: "000000", Style: 2},
-		},
-	}
-	if p.report.AllBorders {
-		boldStyle.Border = []excelize.Border{
-			{Type: "left", Color: "000000", Style: 1},
-			{Type: "top", Color: "000000", Style: 2},
-			{Type: "right", Color: "000000", Style: 1},
-			{Type: "bottom", Color: "000000", Style: 1},
-		}
-	}
-	styleId, _ := p.excel.NewStyle(boldStyle)
 
 	for ci, subtotal := range subtotals {
 		cellName, err := excelize.CoordinatesToCellName(rect.Left+ci, rect.Top)
@@ -317,14 +302,98 @@ func (p *ExcelPagingPrinter) printPageSubtotals(subtotals []float64, isNumeric [
 			return nil, util.Error("CoordinatesToCellName", err)
 		}
 
+		// Build cell style with bold font and number format from column info
+		cellStyle := &excelize.Style{
+			Font: &excelize.Font{Bold: true},
+			Border: []excelize.Border{
+				{Type: "top", Color: "000000", Style: 2},
+			},
+		}
+		if p.report.AllBorders {
+			cellStyle.Border = []excelize.Border{
+				{Type: "left", Color: "000000", Style: 1},
+				{Type: "top", Color: "000000", Style: 2},
+				{Type: "right", Color: "000000", Style: 1},
+				{Type: "bottom", Color: "000000", Style: 1},
+			}
+		}
+
+		// Apply number format from column info if available
+		if ci < len(p.layout.ColumnInfos) && p.layout.ColumnInfos[ci] != nil {
+			colInfo := p.layout.ColumnInfos[ci]
+			if colInfo.NumFormat != nil && colInfo.NumFormat.Fmt != "" {
+				cellStyle.CustomNumFmt = &colInfo.NumFormat.Fmt
+			}
+		}
+
 		if ci == 0 {
 			p.excel.SetCellStr(sheet, cellName, "Page Subtotal")
 		} else if isNumeric[ci] {
 			p.excel.SetCellFloat(sheet, cellName, subtotal, -1, 64)
 		}
+
+		styleId, _ := p.excel.NewStyle(cellStyle)
 		p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
 	}
 
+	return &resRect, nil
+}
+
+// printGrandTotals prints grand totals with column number formats
+func (p *ExcelPagingPrinter) printGrandTotals(grandTotals []float64, isNumeric []bool, sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
+	logger := p.logger.With().Str("print", "grandTotals").Str("sheet", sheet).Logger()
+	logger.Info().Msgf("printing grand totals at row %d, %d columns", rect.Top, len(grandTotals))
+
+	resRect := rect
+	resRect.Height = 1
+	resRect.Width = len(grandTotals)
+
+	for ci, total := range grandTotals {
+		cellName, err := excelize.CoordinatesToCellName(rect.Left+ci, rect.Top)
+		if err != nil {
+			logger.Err(err).Msgf("CoordinatesToCellName failed for col %d", ci)
+			return nil, util.Error("CoordinatesToCellName", err)
+		}
+
+		// Build cell style with bold font and number format from column info
+		cellStyle := &excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		}
+		if p.report.AllBorders {
+			cellStyle.Border = []excelize.Border{
+				{Type: "left", Color: "000000", Style: 1},
+				{Type: "top", Color: "000000", Style: 1},
+				{Type: "right", Color: "000000", Style: 1},
+				{Type: "bottom", Color: "000000", Style: 2},
+			}
+		} else {
+			cellStyle.Border = []excelize.Border{
+				{Type: "bottom", Color: "000000", Style: 2},
+			}
+		}
+
+		// Apply number format from column info if available
+		if ci < len(p.layout.ColumnInfos) && p.layout.ColumnInfos[ci] != nil {
+			colInfo := p.layout.ColumnInfos[ci]
+			if colInfo.NumFormat != nil && colInfo.NumFormat.Fmt != "" {
+				cellStyle.CustomNumFmt = &colInfo.NumFormat.Fmt
+				logger.Debug().Msgf("col[%d] %s: applying number format: %s", ci, cellName, colInfo.NumFormat.Fmt)
+			}
+		}
+
+		if ci == 0 {
+			p.excel.SetCellStr(sheet, cellName, "Grand Total")
+			logger.Debug().Msgf("col[%d] %s: Grand Total label", ci, cellName)
+		} else if isNumeric[ci] {
+			p.excel.SetCellFloat(sheet, cellName, total, -1, 64)
+			logger.Debug().Msgf("col[%d] %s: %.4f", ci, cellName, total)
+		}
+
+		styleId, _ := p.excel.NewStyle(cellStyle)
+		p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
+	}
+
+	logger.Info().Msg("grand totals printed")
 	return &resRect, nil
 }
 
@@ -692,7 +761,7 @@ func (p *ExcelPagingPrinter) printTableRows(rows [][]*enigma.NxCell, sheet strin
 }
 
 // printPage prints a single page with all sections
-func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, totalRows int, isLastPage bool) *util.Result {
+func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, totalRows int, isFirstPage, isLastPage bool, grandTotals []float64, grandTotalIsNumeric []bool) *util.Result {
 	sheetName := fmt.Sprintf("page-%d", pageNum)
 	logger := p.logger.With().Str("sheet", sheetName).Int("page", pageNum).Logger()
 
@@ -800,7 +869,17 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 		}
 	}
 
-	// 5. Total Records
+	// 5. Grand Totals (only on first page)
+	if isFirstPage && p.Config.ShowGrandTotals && len(grandTotals) > 0 {
+		rect := enigma.Rect{Top: currentRow, Left: 1}
+		_, res := p.printGrandTotals(grandTotals, grandTotalIsNumeric, sheetName, rect)
+		if res != nil {
+			return res.With("printGrandTotals")
+		}
+		currentRow += 2 // +1 for the row, +1 for blank row
+	}
+
+	// 6. Total Records
 	{
 		rect := enigma.Rect{Top: currentRow, Left: 1}
 		_, res := p.printTotalRecords(totalRows, sheetName, rect)
@@ -810,7 +889,7 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 		currentRow += 2 // +1 for the row, +1 for blank row
 	}
 
-	// 6. Table Header
+	// 7. Table Header
 	headerRect := enigma.Rect{Top: currentRow, Left: 1}
 	{
 		hRect, res := p.printTableHeader(sheetName, headerRect)
@@ -820,7 +899,7 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 		currentRow += hRect.Height
 	}
 
-	// 6. Column Numbers (optional)
+	// 8. Column Numbers (optional)
 	if p.Config.ShowColumnNumbers {
 		rect := enigma.Rect{Top: currentRow, Left: 1}
 		numRect, res := p.printColumnNumbers(colCount, sheetName, rect)
@@ -830,7 +909,7 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 		currentRow += numRect.Height
 	}
 
-	// 7. Table Rows
+	// 9. Table Rows
 	dataRect := enigma.Rect{Top: currentRow, Left: 1}
 	subtotals, isNumeric, res := p.printTableRows(rows, sheetName, dataRect)
 	if res != nil {
@@ -838,7 +917,7 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 	}
 	currentRow += len(rows)
 
-	// 8. Page Subtotals (optional)
+	// 10. Page Subtotals (optional)
 	if p.Config.ShowSubtotals {
 		rect := enigma.Rect{Top: currentRow, Left: 1}
 		_, res := p.printPageSubtotals(subtotals, isNumeric, sheetName, rect)
@@ -848,7 +927,7 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 		currentRow++
 	}
 
-	// 9. Custom Footers (only on last page)
+	// 11. Custom Footers (only on last page)
 	if isLastPage && len(p.report.Footers) > 0 {
 		currentRow++ // blank row before footers
 		// Apply FootersOffset if specified
@@ -886,7 +965,7 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 
 	_ = currentRow // track final row position for logging
 
-	// 10. Set print parameters
+	// 12. Set print parameters
 	pageOpts := &excelize.PageLayoutOptions{
 		Size:        util.Ptr(9), // A4
 		Orientation: util.Ptr("landscape"),
@@ -1077,6 +1156,26 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 	// Create Excel file
 	p.excel = excelize.NewFile()
 
+	// Calculate grand totals from all rows (if enabled)
+	var grandTotals []float64
+	var grandTotalIsNumeric []bool
+	if p.Config.ShowGrandTotals && len(allRows) > 0 {
+		grandTotals = make([]float64, colCount)
+		grandTotalIsNumeric = make([]bool, colCount)
+		for _, row := range allRows {
+			for ci, cell := range row {
+				if cell == nil {
+					continue
+				}
+				cellNum := float64(cell.Num)
+				if !math.IsNaN(cellNum) {
+					grandTotals[ci] += cellNum
+					grandTotalIsNumeric[ci] = true
+				}
+			}
+		}
+	}
+
 	// Calculate pages
 	pageCount := (len(allRows) + p.Config.RowsPerPage - 1) / p.Config.RowsPerPage
 	if pageCount == 0 {
@@ -1093,8 +1192,9 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 		}
 
 		pageRows := allRows[startRow:endRow]
+		isFirstPage := pageIdx == 0
 		isLastPage := pageIdx == pageCount-1
-		if res := p.printPage(pageIdx+1, pageRows, totalRows, isLastPage); res != nil {
+		if res := p.printPage(pageIdx+1, pageRows, totalRows, isFirstPage, isLastPage, grandTotals, grandTotalIsNumeric); res != nil {
 			return res.With(fmt.Sprintf("printPage[%d]", pageIdx+1))
 		}
 	}

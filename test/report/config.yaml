@@ -83,6 +83,7 @@ report:
     total_records_label: "Total Records Found"
     show_column_numbers: false
     show_subtotals: false
+    show_grand_totals: true    # Show grand totals on first page (above table)
     header_groups:
       - name: "Sales Metrics"
         start: 2
