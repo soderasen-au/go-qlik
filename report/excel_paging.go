@@ -1003,6 +1003,9 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 		if r.PaginationConfig.ShowSubtotals {
 			p.Config.ShowSubtotals = r.PaginationConfig.ShowSubtotals
 		}
+		if r.PaginationConfig.ShowGrandTotals {
+			p.Config.ShowGrandTotals = r.PaginationConfig.ShowGrandTotals
+		}
 		if r.PaginationConfig.HeaderGroups != nil {
 			p.Config.HeaderGroups = r.PaginationConfig.HeaderGroups
 		}
