@@ -109,6 +109,22 @@ type ColumnHeaderFormat struct {
 	Width        float64 `json:"width,omitempty"`
 }
 
+// PageSize	Paper Type	Dimensions
+// 1	Letter			8.5" x 11"
+// 2	Letter Small	8.5" x 11"
+// 3	Tabloid			11" x 17"
+// 4	Ledger			17" x 11"
+// 5	Legal			8.5" x 14"
+// 6	Statement		5.5" x 8.5"
+// 7	Executive		7.25" x 10.5"
+// 8	A3				297 x 420 mm
+// 9	A4 (Most Common)	210 x 297 mm
+// 10	A4 Small		210 x 297 mm
+// 11	A5				148 x 210 mm
+// 12	B4 (JIS)		257 x 364 mm
+// 13	B5 (JIS)		182 x 257 mm
+// 14	Folio			8.5" x 13"
+// 15	Quarto			215 x 275 mm
 type PaginationConfig struct {
 	RowsPerPage       int           `json:"rows_per_page,omitempty" yaml:"rows_per_page,omitempty" bson:"rows_per_page,omitempty"`
 	TotalRecordsLabel string        `json:"total_records_label" yaml:"total_records_label" bson:"total_records_label"`
@@ -117,6 +133,8 @@ type PaginationConfig struct {
 	ShowGrandTotals   bool          `json:"show_grand_totals" yaml:"show_grand_totals"`
 	ConverToPDF       bool          `json:"convert_to_pdf" yaml:"convert_to_pdf" bson:"convert_to_pdf"`
 	HeaderGroups      []HeaderGroup `json:"header_groups,omitempty" yaml:"header_groups,omitempty" bson:"header_groups,omitempty"`
+	PageSize          int           `json:"page_size,omitempty" yaml:"page_size,omitempty" bson:"page_size,omitempty"`                      // only for PDF
+	PageOrientation   string        `json:"page_orientation,omitempty" yaml:"page_orientation,omitempty" bson:"page_orientation,omitempty"` // only for PDF, values: "landscape", "portrait"
 }
 
 // user has to apply any needed selection before printing report

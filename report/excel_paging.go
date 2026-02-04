@@ -32,6 +32,8 @@ type ExcelPagingConfig struct {
 	ShowSubtotals     bool          `json:"show_subtotals" yaml:"show_subtotals"`
 	ShowGrandTotals   bool          `json:"show_grand_totals" yaml:"show_grand_totals"`
 	HeaderGroups      []HeaderGroup `json:"header_groups" yaml:"header_groups"`
+	PageSize          int           `json:"page_size,omitempty" yaml:"page_size,omitempty" bson:"page_size,omitempty"`                      // only for PDF
+	PageOrientation   string        `json:"page_orientation,omitempty" yaml:"page_orientation,omitempty" bson:"page_orientation,omitempty"` // only for PDF, values: "landscape", "portrait"
 }
 
 // DefaultExcelPagingConfig returns default configuration
@@ -42,6 +44,8 @@ func DefaultExcelPagingConfig() ExcelPagingConfig {
 		TotalRecordsLabel: "Total Records Found",
 		ShowColumnNumbers: false,
 		ShowSubtotals:     false,
+		PageSize:          9, // Default to A4 size (9)
+		PageOrientation:   "landscape",
 	}
 }
 
@@ -424,7 +428,7 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 
 	boldStyle := &excelize.Style{
 		Font:      &excelize.Font{Bold: true},
-		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
+		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center", WrapText: true},
 	}
 	if p.report.AllBorders {
 		boldStyle.Border = []excelize.Border{
@@ -568,6 +572,10 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 // groupTableHeader merges table headers into groups according to HeaderGroups configuration
 func (p *ExcelPagingPrinter) groupTableHeader(sheet string, rect enigma.Rect, colCount int, styleId int) *util.Result {
 	logger := p.logger.With().Str("print", "groupTableHeader").Logger()
+
+	if len(p.Config.HeaderGroups) == 0 {
+		return nil
+	}
 
 	inGroup := make(map[int]bool)
 	for _, group := range p.Config.HeaderGroups {
@@ -967,8 +975,8 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 
 	// 12. Set print parameters
 	pageOpts := &excelize.PageLayoutOptions{
-		Size:        util.Ptr(9), // A4
-		Orientation: util.Ptr("landscape"),
+		Size:        util.Ptr(p.Config.PageSize),
+		Orientation: util.Ptr(p.Config.PageOrientation),
 		FitToWidth:  util.Ptr(1),
 	}
 	err = p.excel.SetPageLayout(sheetName, pageOpts)
@@ -1008,6 +1016,12 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 		}
 		if r.PaginationConfig.HeaderGroups != nil {
 			p.Config.HeaderGroups = r.PaginationConfig.HeaderGroups
+		}
+		if r.PaginationConfig.PageSize > 0 {
+			p.Config.PageSize = r.PaginationConfig.PageSize
+		}
+		if r.PaginationConfig.PageOrientation != "" {
+			p.Config.PageOrientation = r.PaginationConfig.PageOrientation
 		}
 	}
 
