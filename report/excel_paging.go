@@ -245,27 +245,29 @@ func (p *ExcelPagingPrinter) printReportTitle(title string, sheet string, rect e
 	return &resRect, nil
 }
 
-// printTotalRecords prints the total records count
-func (p *ExcelPagingPrinter) printTotalRecords(totalRows int, sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
+// printTotalRecords prints the total records count using merged cells spanning the full table width
+func (p *ExcelPagingPrinter) printTotalRecords(totalRows int, colCount int, sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
 	resRect := rect
 	resRect.Height = 1
-	resRect.Width = 2
+	resRect.Width = colCount
 
-	labelCell, err := excelize.CoordinatesToCellName(rect.Left, rect.Top)
+	// Merge all columns in this row into one cell
+	startCell, err := excelize.CoordinatesToCellName(rect.Left, rect.Top)
 	if err != nil {
 		return nil, util.Error("CoordinatesToCellName", err)
 	}
-	p.excel.SetCellStr(sheet, labelCell, fmt.Sprintf("%s:", p.Config.TotalRecordsLabel))
+	endCell, err := excelize.CoordinatesToCellName(rect.Left+colCount-1, rect.Top)
+	if err != nil {
+		return nil, util.Error("CoordinatesToCellName", err)
+	}
+	p.excel.MergeCell(sheet, startCell, endCell)
+
+	// Print joined label + value
+	p.excel.SetCellStr(sheet, startCell, fmt.Sprintf("%s: %d", p.Config.TotalRecordsLabel, totalRows))
 
 	boldStyle := &excelize.Style{Font: &excelize.Font{Bold: true}}
 	styleId, _ := p.excel.NewStyle(boldStyle)
-	p.excel.SetCellStyle(sheet, labelCell, labelCell, styleId)
-
-	valueCell, err := excelize.CoordinatesToCellName(rect.Left+1, rect.Top)
-	if err != nil {
-		return nil, util.Error("CoordinatesToCellName", err)
-	}
-	p.excel.SetCellInt(sheet, valueCell, int64(totalRows))
+	p.excel.SetCellStyle(sheet, startCell, endCell, styleId)
 
 	return &resRect, nil
 }
@@ -654,8 +656,8 @@ func (p *ExcelPagingPrinter) groupTableHeader(sheet string, rect enigma.Rect, co
 	return nil
 }
 
-// printCustomHeaders prints custom headers section
-func (p *ExcelPagingPrinter) printCustomHeaders(sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
+// printCustomHeaders prints custom headers section using merged cells spanning the full table width
+func (p *ExcelPagingPrinter) printCustomHeaders(colCount int, sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
 	resRect := rect
 	resRect.Height = 0
 	resRect.Width = 0
@@ -673,28 +675,29 @@ func (p *ExcelPagingPrinter) printCustomHeaders(sheet string, rect enigma.Rect) 
 	}
 
 	for hi, header := range p.report.Headers {
-		labelCell, _ := excelize.CoordinatesToCellName(headerColStart, headerRowStart+hi)
-		p.excel.SetCellStr(sheet, labelCell, header.Label)
-
-		textCell, _ := excelize.CoordinatesToCellName(headerColStart+1, headerRowStart+hi)
+		// Evaluate text value
+		textVal := header.Text
 		if text := strings.TrimSpace(header.Text); strings.HasPrefix(text, "=") {
 			dual, err := p.doc.EvaluateEx(engine.ConnCtx, header.Text)
 			if err == nil {
-				evalText := dual.Text
-				if evalText == "" && dual.IsNumeric {
-					evalText = fmt.Sprintf("%v", dual.Number)
+				textVal = dual.Text
+				if textVal == "" && dual.IsNumeric {
+					textVal = fmt.Sprintf("%v", dual.Number)
 				}
-				p.excel.SetCellStr(sheet, textCell, evalText)
-			} else {
-				p.excel.SetCellStr(sheet, textCell, header.Text)
 			}
-		} else {
-			p.excel.SetCellStr(sheet, textCell, header.Text)
 		}
+
+		// Merge all columns in this row into one cell
+		startCell, _ := excelize.CoordinatesToCellName(headerColStart, headerRowStart+hi)
+		endCell, _ := excelize.CoordinatesToCellName(headerColStart+colCount-1, headerRowStart+hi)
+		p.excel.MergeCell(sheet, startCell, endCell)
+
+		// Print joined label + text
+		p.excel.SetCellStr(sheet, startCell, header.Label+" "+textVal)
 	}
 
 	resRect.Height = len(p.report.Headers)
-	resRect.Width = 2
+	resRect.Width = colCount
 	if p.report.HeadersOffset != nil {
 		resRect.Height += p.report.HeadersOffset.Top
 	}
@@ -702,8 +705,8 @@ func (p *ExcelPagingPrinter) printCustomHeaders(sheet string, rect enigma.Rect) 
 	return &resRect, nil
 }
 
-// printCustomFooters prints custom footers section
-func (p *ExcelPagingPrinter) printCustomFooters(sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
+// printCustomFooters prints custom footers section using merged cells spanning the full table width
+func (p *ExcelPagingPrinter) printCustomFooters(colCount int, sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
 	resRect := rect
 	resRect.Height = 0
 	resRect.Width = 0
@@ -721,28 +724,29 @@ func (p *ExcelPagingPrinter) printCustomFooters(sheet string, rect enigma.Rect) 
 	}
 
 	for fi, footer := range p.report.Footers {
-		labelCell, _ := excelize.CoordinatesToCellName(footerColStart, footerRowStart+fi)
-		p.excel.SetCellStr(sheet, labelCell, footer.Label)
-
-		textCell, _ := excelize.CoordinatesToCellName(footerColStart+1, footerRowStart+fi)
+		// Evaluate text value
+		textVal := footer.Text
 		if text := strings.TrimSpace(footer.Text); strings.HasPrefix(text, "=") {
 			dual, err := p.doc.EvaluateEx(engine.ConnCtx, footer.Text)
 			if err == nil {
-				evalText := dual.Text
-				if evalText == "" && dual.IsNumeric {
-					evalText = fmt.Sprintf("%v", dual.Number)
+				textVal = dual.Text
+				if textVal == "" && dual.IsNumeric {
+					textVal = fmt.Sprintf("%v", dual.Number)
 				}
-				p.excel.SetCellStr(sheet, textCell, evalText)
-			} else {
-				p.excel.SetCellStr(sheet, textCell, footer.Text)
 			}
-		} else {
-			p.excel.SetCellStr(sheet, textCell, footer.Text)
 		}
+
+		// Merge all columns in this row into one cell
+		startCell, _ := excelize.CoordinatesToCellName(footerColStart, footerRowStart+fi)
+		endCell, _ := excelize.CoordinatesToCellName(footerColStart+colCount-1, footerRowStart+fi)
+		p.excel.MergeCell(sheet, startCell, endCell)
+
+		// Print joined label + text
+		p.excel.SetCellStr(sheet, startCell, footer.Label+" "+textVal)
 	}
 
 	resRect.Height = len(p.report.Footers)
-	resRect.Width = 2
+	resRect.Width = colCount
 	if p.report.FootersOffset != nil {
 		resRect.Height += p.report.FootersOffset.Top
 	}
@@ -750,7 +754,7 @@ func (p *ExcelPagingPrinter) printCustomFooters(sheet string, rect enigma.Rect) 
 	return &resRect, nil
 }
 
-// printLegends prints legends section (right-aligned with table)
+// printLegends prints legends section using merged cells spanning the full table width, right-aligned
 func (p *ExcelPagingPrinter) printLegends(colCount int, sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
 	resRect := rect
 	resRect.Height = 0
@@ -760,10 +764,7 @@ func (p *ExcelPagingPrinter) printLegends(colCount int, sheet string, rect enigm
 		return &resRect, nil
 	}
 
-	// Legends occupy 2 columns (label + text)
-	// Table starts at column 1, so right-most column = colCount
-	legendWidth := 2
-	legendColStart := colCount - legendWidth + 1 // label column
+	legendColStart := rect.Left
 	legendRowStart := rect.Top
 	// Apply LegendOffset if specified
 	if p.report.LegendOffset != nil {
@@ -771,29 +772,36 @@ func (p *ExcelPagingPrinter) printLegends(colCount int, sheet string, rect enigm
 		legendColStart += p.report.LegendOffset.Left
 	}
 
-	for li, legend := range p.report.Legends {
-		labelCell, _ := excelize.CoordinatesToCellName(legendColStart, legendRowStart+li)
-		p.excel.SetCellStr(sheet, labelCell, legend.Label)
+	rightStyle := &excelize.Style{
+		Alignment: &excelize.Alignment{Horizontal: "right"},
+	}
+	styleId, _ := p.excel.NewStyle(rightStyle)
 
-		textCell, _ := excelize.CoordinatesToCellName(legendColStart+1, legendRowStart+li)
+	for li, legend := range p.report.Legends {
+		// Evaluate text value
+		textVal := legend.Text
 		if text := strings.TrimSpace(legend.Text); strings.HasPrefix(text, "=") {
 			dual, err := p.doc.EvaluateEx(engine.ConnCtx, legend.Text)
 			if err == nil {
-				evalText := dual.Text
-				if evalText == "" && dual.IsNumeric {
-					evalText = fmt.Sprintf("%v", dual.Number)
+				textVal = dual.Text
+				if textVal == "" && dual.IsNumeric {
+					textVal = fmt.Sprintf("%v", dual.Number)
 				}
-				p.excel.SetCellStr(sheet, textCell, evalText)
-			} else {
-				p.excel.SetCellStr(sheet, textCell, legend.Text)
 			}
-		} else {
-			p.excel.SetCellStr(sheet, textCell, legend.Text)
 		}
+
+		// Merge all columns in this row into one cell
+		startCell, _ := excelize.CoordinatesToCellName(legendColStart, legendRowStart+li)
+		endCell, _ := excelize.CoordinatesToCellName(legendColStart+colCount-1, legendRowStart+li)
+		p.excel.MergeCell(sheet, startCell, endCell)
+
+		// Print joined label + text, right-aligned
+		p.excel.SetCellStr(sheet, startCell, legend.Label+" "+textVal)
+		p.excel.SetCellStyle(sheet, startCell, endCell, styleId)
 	}
 
 	resRect.Height = len(p.report.Legends)
-	resRect.Width = 2
+	resRect.Width = colCount
 	if p.report.LegendOffset != nil {
 		resRect.Height += p.report.LegendOffset.Top
 	}
@@ -954,7 +962,7 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 	// 3. Custom Headers
 	{
 		rect := enigma.Rect{Top: currentRow, Left: 1}
-		headerRect, res := p.printCustomHeaders(sheetName, rect)
+		headerRect, res := p.printCustomHeaders(colCount, sheetName, rect)
 		if res != nil {
 			return res.With("printCustomHeaders")
 		}
@@ -988,7 +996,7 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 	// 6. Total Records
 	{
 		rect := enigma.Rect{Top: currentRow, Left: 1}
-		_, res := p.printTotalRecords(totalRows, sheetName, rect)
+		_, res := p.printTotalRecords(totalRows, colCount, sheetName, rect)
 		if res != nil {
 			return res.With("printTotalRecords")
 		}
@@ -1037,7 +1045,7 @@ func (p *ExcelPagingPrinter) printPage(pageNum int, rows [][]*enigma.NxCell, tot
 	if isLastPage {
 		currentRow++ // blank row before footers
 		rect := enigma.Rect{Top: currentRow, Left: 1}
-		footerRect, res := p.printCustomFooters(sheetName, rect)
+		footerRect, res := p.printCustomFooters(colCount, sheetName, rect)
 		if res != nil {
 			return res.With("printCustomFooters")
 		}
