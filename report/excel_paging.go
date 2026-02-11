@@ -263,7 +263,7 @@ func (p *ExcelPagingPrinter) printTotalRecords(totalRows int, colCount int, shee
 	p.excel.MergeCell(sheet, startCell, endCell)
 
 	// Print joined label + value
-	p.excel.SetCellStr(sheet, startCell, fmt.Sprintf("%s: %d", p.Config.TotalRecordsLabel, totalRows))
+	p.excel.SetCellStr(sheet, startCell, fmt.Sprintf("%s %d", p.Config.TotalRecordsLabel, totalRows))
 
 	boldStyle := &excelize.Style{Font: &excelize.Font{Bold: true}}
 	styleId, _ := p.excel.NewStyle(boldStyle)
