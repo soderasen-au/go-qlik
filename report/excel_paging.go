@@ -563,6 +563,17 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 
 	resRect.Width = ColCnt
 
+	// Set header row height if specified
+	if p.report.HeadersRowHeight != nil {
+		for row := rect.Top; row <= rect.Top+1; row++ {
+			err := p.excel.SetRowHeight(sheet, row, *p.report.HeadersRowHeight)
+			if err != nil {
+				logger.Err(err).Msgf("SetRowHeight for row %d", row)
+				return nil, util.Error("SetRowHeight", err)
+			}
+		}
+	}
+
 	// Group table headers according to HeaderGroups configuration
 	if res := p.groupTableHeader(sheet, rect, ColCnt, styleId); res != nil {
 		return nil, res.With("groupTableHeader")

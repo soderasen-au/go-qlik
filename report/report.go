@@ -156,6 +156,7 @@ type Report struct {
 	// layout
 	Headers                []CustomHeader                `json:"headers,omitempty" yaml:"headers,omitempty" bson:"headers,omitempty"`
 	HeadersOffset          *enigma.Rect                  `json:"headers_offset,omitempty" yaml:"headers_offset,omitempty" bson:"headers_offset,omitempty"`
+	HeadersRowHeight       *float64                      `json:"headers_row_height,omitempty" yaml:"headers_row_height,omitempty" bson:"headers_row_height,omitempty"`
 	OptionalTargetTitles   map[string]string             `json:"optional_target_titles,omitempty" yaml:"optional_target_titles,omitempty" bson:"optional_target_titles,omitempty"`
 	OutputCurrentSelection bool                          `json:"output_current_selection,omitempty" yaml:"output_current_selection,omitempty" bson:"output_current_selection,omitempty"`
 	CurrentSelectionOrder  map[string]int                `json:"current_selection_order" yaml:"current_selection_order" bson:"current_selection_order"`
