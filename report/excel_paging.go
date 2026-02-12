@@ -466,7 +466,9 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 		p.cube2report[ColCnt] = ColCnt
 		if p.report.ColumnHeaderFormats != nil {
 			if colHeaderFmt, ok := p.report.ColumnHeaderFormats[cellText]; ok {
-				p.cube2report[ColCnt] = colHeaderFmt.Order
+				if colHeaderFmt.ColumnType == StaticColumnType {
+					p.cube2report[ColCnt] = colHeaderFmt.Order
+				}
 				if colHeaderFmt.Label != "" {
 					cellText = colHeaderFmt.Label
 				}
@@ -1214,7 +1216,9 @@ func (p *ExcelPagingPrinter) Print(r Report) *util.Result {
 		cellText := colInfo.FallbackTitle
 		if r.ColumnHeaderFormats != nil {
 			if colHeaderFmt, ok := r.ColumnHeaderFormats[cellText]; ok {
-				tempCube2report[ColCnt] = colHeaderFmt.Order
+				if colHeaderFmt.ColumnType == StaticColumnType {
+					tempCube2report[ColCnt] = colHeaderFmt.Order
+				}
 			}
 		}
 		ColCnt++
