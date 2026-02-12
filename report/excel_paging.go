@@ -885,8 +885,21 @@ func (p *ExcelPagingPrinter) printTableRows(rows [][]*enigma.NxCell, sheet strin
 
 	// Determine which columns are numeric
 	for ci, colInfo := range p.layout.ColumnInfos {
-		if colInfo != nil && colInfo.NumFormat != nil && colInfo.NumFormat.Type != "U" {
+		if colInfo == nil {
+			continue
+		}
+		if colInfo.NumFormat != nil && colInfo.NumFormat.Type != "U" {
 			isNumeric[ci] = true
+		}
+
+		if p.report.ColumnHeaderFormats != nil {
+			cellText := colInfo.FallbackTitle
+			if colHeaderFmt, ok := p.report.ColumnHeaderFormats[cellText]; ok {
+				if colHeaderFmt.ColumnType != StaticColumnType && colHeaderFmt.DisableSubtotals {
+					logger.Debug().Msgf("column %d (%s) subtotals disabled by column header format", ci, cellText)
+					isNumeric[ci] = false
+				}
+			}
 		}
 	}
 
@@ -918,10 +931,9 @@ func (p *ExcelPagingPrinter) printTableRows(rows [][]*enigma.NxCell, sheet strin
 				}
 			}
 
-			if isNum && hasColInfo {
+			if isNum && hasColInfo && isNumeric[ci] {
 				p.excel.SetCellFloat(sheet, cellName, cellNum, -1, 64)
 				subtotals[ci] += cellNum
-				isNumeric[ci] = true
 			} else {
 				p.excel.SetCellStr(sheet, cellName, cell.Text)
 			}

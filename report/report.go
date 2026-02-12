@@ -95,18 +95,19 @@ type Legend struct {
 }
 
 type ColumnHeaderFormat struct {
-	Order        int     `json:"order"`
-	Label        string  `json:"label"`
-	Bold         bool    `json:"bold"`
-	FgColor      string  `json:"fg_color"`
-	BgColor      string  `json:"bg_color"`
-	NumFmt       string  `json:"num_fmt"`
-	DateFmt      string  `json:"date_fmt"`
-	ColumnType   string  `json:"column_type,omitempty"`
-	StaticValue  string  `json:"static_value"`
-	TableName    string  `json:"table_name"`
-	SrcFieldName string  `json:"src_field_name"`
-	Width        float64 `json:"width,omitempty"`
+	Order            int     `json:"order"`
+	Label            string  `json:"label"`
+	Bold             bool    `json:"bold"`
+	FgColor          string  `json:"fg_color"`
+	BgColor          string  `json:"bg_color"`
+	NumFmt           string  `json:"num_fmt"`
+	DateFmt          string  `json:"date_fmt"`
+	ColumnType       string  `json:"column_type,omitempty"`
+	StaticValue      string  `json:"static_value"`
+	TableName        string  `json:"table_name"`
+	SrcFieldName     string  `json:"src_field_name"`
+	Width            float64 `json:"width,omitempty"`
+	DisableSubtotals bool    `json:"disable_subtotals,omitempty"`
 }
 
 // PageSize	Paper Type	Dimensions
