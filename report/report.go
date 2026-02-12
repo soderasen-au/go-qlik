@@ -167,6 +167,8 @@ type Report struct {
 	FootersOffset          *enigma.Rect                  `json:"footers_offset,omitempty" yaml:"footers_offset,omitempty" bson:"footers_offset,omitempty"`
 	Legends                []Legend                      `json:"legends,omitempty" yaml:"legends,omitempty" bson:"legends,omitempty"`
 	LegendOffset           *enigma.Rect                  `json:"legend_offset,omitempty" yaml:"legend_offset,omitempty" bson:"legend_offset,omitempty"`
+	RowHeight              *float64                      `json:"row_height,omitempty" yaml:"row_height,omitempty" bson:"row_height,omitempty"`
+	TableWrapText          bool                          `json:"table_wrap_text,omitempty" yaml:"table_wrap_text,omitempty" bson:"table_wrap_text,omitempty"`
 
 	// output
 	Driver               *string           `json:"driver,omitempty" yaml:"driver,omitempty" bson:"driver,omitempty"`

@@ -76,6 +76,19 @@ func NewExcelPagingPrinter(config ExcelPagingConfig) *ExcelPagingPrinter {
 	return p
 }
 
+// setRowHeight sets row height for the given rows if Report.RowHeight is configured.
+func (p *ExcelPagingPrinter) setRowHeight(sheet string, startRow, endRow int) *util.Result {
+	if p.report.RowHeight == nil {
+		return nil
+	}
+	for row := startRow; row <= endRow; row++ {
+		if err := p.excel.SetRowHeight(sheet, row, *p.report.RowHeight); err != nil {
+			return util.Error("SetRowHeight", err)
+		}
+	}
+	return nil
+}
+
 // printHorizontalSelection prints current selections in horizontal format
 // Field names in one row, field values in the next row
 func (p *ExcelPagingPrinter) printHorizontalSelection(sheet string, rect enigma.Rect) (*enigma.Rect, *util.Result) {
@@ -209,6 +222,10 @@ func (p *ExcelPagingPrinter) printHorizontalSelection(sheet string, rect enigma.
 	resRect.Height = 3 // title + field names + field values
 	resRect.Width = len(items)
 
+	if res := p.setRowHeight(sheet, rect.Top, rect.Top+2); res != nil {
+		return nil, res.With("printHorizontalSelection")
+	}
+
 	return &resRect, nil
 }
 
@@ -242,6 +259,10 @@ func (p *ExcelPagingPrinter) printReportTitle(title string, sheet string, rect e
 	resRect.Height = 1
 	resRect.Width = 1
 
+	if res := p.setRowHeight(sheet, rect.Top, rect.Top); res != nil {
+		return nil, res.With("printReportTitle")
+	}
+
 	return &resRect, nil
 }
 
@@ -269,6 +290,10 @@ func (p *ExcelPagingPrinter) printTotalRecords(totalRows int, colCount int, shee
 	styleId, _ := p.excel.NewStyle(boldStyle)
 	p.excel.SetCellStyle(sheet, startCell, endCell, styleId)
 
+	if res := p.setRowHeight(sheet, rect.Top, rect.Top); res != nil {
+		return nil, res.With("printTotalRecords")
+	}
+
 	return &resRect, nil
 }
 
@@ -291,6 +316,10 @@ func (p *ExcelPagingPrinter) printColumnNumbers(colCount int, sheet string, rect
 		}
 		p.excel.SetCellInt(sheet, cellName, int64(ci+1))
 		p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
+	}
+
+	if res := p.setRowHeight(sheet, rect.Top, rect.Top); res != nil {
+		return nil, res.With("printColumnNumbers")
 	}
 
 	return &resRect, nil
@@ -340,6 +369,10 @@ func (p *ExcelPagingPrinter) printPageSubtotals(subtotals []float64, isNumeric [
 
 		styleId, _ := p.excel.NewStyle(cellStyle)
 		p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
+	}
+
+	if res := p.setRowHeight(sheet, rect.Top, rect.Top); res != nil {
+		return nil, res.With("printPageSubtotals")
 	}
 
 	return &resRect, nil
@@ -397,6 +430,10 @@ func (p *ExcelPagingPrinter) printGrandTotals(grandTotals []float64, isNumeric [
 
 		styleId, _ := p.excel.NewStyle(cellStyle)
 		p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
+	}
+
+	if res := p.setRowHeight(sheet, rect.Top, rect.Top); res != nil {
+		return nil, res.With("printGrandTotals")
 	}
 
 	logger.Info().Msg("grand totals printed")
@@ -565,10 +602,14 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 
 	resRect.Width = ColCnt
 
-	// Set header row height if specified
+	// Set header row height: RowHeight as default, HeadersRowHeight as override
+	headerRowHeight := p.report.RowHeight
 	if p.report.HeadersRowHeight != nil {
+		headerRowHeight = p.report.HeadersRowHeight
+	}
+	if headerRowHeight != nil {
 		for row := rect.Top; row <= rect.Top+1; row++ {
-			err := p.excel.SetRowHeight(sheet, row, *p.report.HeadersRowHeight)
+			err := p.excel.SetRowHeight(sheet, row, *headerRowHeight)
 			if err != nil {
 				logger.Err(err).Msgf("SetRowHeight for row %d", row)
 				return nil, util.Error("SetRowHeight", err)
@@ -715,6 +756,10 @@ func (p *ExcelPagingPrinter) printCustomHeaders(colCount int, sheet string, rect
 		resRect.Height += p.report.HeadersOffset.Top
 	}
 
+	if res := p.setRowHeight(sheet, headerRowStart, headerRowStart+len(p.report.Headers)-1); res != nil {
+		return nil, res.With("printCustomHeaders")
+	}
+
 	return &resRect, nil
 }
 
@@ -762,6 +807,10 @@ func (p *ExcelPagingPrinter) printCustomFooters(colCount int, sheet string, rect
 	resRect.Width = colCount
 	if p.report.FootersOffset != nil {
 		resRect.Height += p.report.FootersOffset.Top
+	}
+
+	if res := p.setRowHeight(sheet, footerRowStart, footerRowStart+len(p.report.Footers)-1); res != nil {
+		return nil, res.With("printCustomFooters")
 	}
 
 	return &resRect, nil
@@ -817,6 +866,10 @@ func (p *ExcelPagingPrinter) printLegends(colCount int, sheet string, rect enigm
 	resRect.Width = colCount
 	if p.report.LegendOffset != nil {
 		resRect.Height += p.report.LegendOffset.Top
+	}
+
+	if res := p.setRowHeight(sheet, legendRowStart, legendRowStart+len(p.report.Legends)-1); res != nil {
+		return nil, res.With("printLegends")
 	}
 
 	return &resRect, nil
@@ -901,6 +954,16 @@ func (p *ExcelPagingPrinter) printTableRows(rows [][]*enigma.NxCell, sheet strin
 				}
 			}
 
+			if p.report.TableWrapText {
+				if excelStyle == nil {
+					excelStyle = &excelize.Style{}
+				}
+				if excelStyle.Alignment == nil {
+					excelStyle.Alignment = &excelize.Alignment{}
+				}
+				excelStyle.Alignment.WrapText = true
+			}
+
 			if excelStyle != nil {
 				styleId, _ := p.excel.NewStyle(excelStyle)
 				p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
@@ -930,6 +993,12 @@ func (p *ExcelPagingPrinter) printTableRows(rows [][]*enigma.NxCell, sheet strin
 					}
 				}
 			}
+		}
+	}
+
+	if len(rows) > 0 {
+		if res := p.setRowHeight(sheet, rect.Top, rect.Top+len(rows)-1); res != nil {
+			return nil, nil, res.With("printTableRows")
 		}
 	}
 

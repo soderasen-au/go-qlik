@@ -3,6 +3,7 @@ package report
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -224,6 +225,33 @@ func (l *LibreExcel2PDF) executeConversion(ctx context.Context, config ExcelToPD
 		return util.Error("os.MkdirAll", err)
 	}
 
+	// Copy input to a unique temp file so concurrent conversions of the same
+	// source file don't collide on LibreOffice's output name (it derives the
+	// PDF name from the input filename).
+	inputExt := filepath.Ext(absInputPath)
+	tempInput, err := os.CreateTemp(outputDir, "libre-convert-*"+inputExt)
+	if err != nil {
+		logger.Err(err).Msg("failed to create temp input file")
+		return util.Error("os.CreateTemp", err)
+	}
+	tempInputPath := tempInput.Name()
+	defer os.Remove(tempInputPath)
+
+	srcFile, err := os.Open(absInputPath)
+	if err != nil {
+		tempInput.Close()
+		logger.Err(err).Msg("failed to open input file")
+		return util.Error("os.Open", err)
+	}
+	if _, err := io.Copy(tempInput, srcFile); err != nil {
+		srcFile.Close()
+		tempInput.Close()
+		logger.Err(err).Msg("failed to copy input to temp file")
+		return util.Error("io.Copy", err)
+	}
+	srcFile.Close()
+	tempInput.Close()
+
 	absWorkerProfileDir, err := filepath.Abs(workerProfileDir)
 	if err != nil {
 		logger.Err(err).Msg("failed to get absolute path for worker profile directory")
@@ -240,7 +268,7 @@ func (l *LibreExcel2PDF) executeConversion(ctx context.Context, config ExcelToPD
 		"--headless",
 		"--convert-to", "pdf",
 		"--outdir", outputDir,
-		absInputPath,
+		tempInputPath,
 	}
 
 	logger.Debug().
@@ -262,14 +290,13 @@ func (l *LibreExcel2PDF) executeConversion(ctx context.Context, config ExcelToPD
 
 	logger.Debug().Str("output", string(output)).Msg("LibreOffice conversion output")
 
-	// LibreOffice converts "input.xlsx" to "input.pdf" in the output directory
-	// We need to handle the case where output filename doesn't match our desired name
-	inputBase := filepath.Base(absInputPath)
-	inputExt := filepath.Ext(inputBase)
-	inputName := inputBase[:len(inputBase)-len(inputExt)]
-	libreOutputPath := filepath.Join(outputDir, inputName+".pdf")
+	// LibreOffice outputs "<tempName>.pdf" in the output directory
+	tempBase := filepath.Base(tempInputPath)
+	tempName := tempBase[:len(tempBase)-len(filepath.Ext(tempBase))]
+	libreOutputPath := filepath.Join(outputDir, tempName+".pdf")
+	defer os.Remove(libreOutputPath) // clean up intermediate PDF if rename succeeds or fails
 
-	// If LibreOffice output path differs from desired path, rename it
+	// Rename LibreOffice output to the desired path
 	if libreOutputPath != absOutputPath {
 		logger.Debug().
 			Str("from", libreOutputPath).

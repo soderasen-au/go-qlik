@@ -7,6 +7,7 @@ import (
 
 	"github.com/qlik-oss/enigma-go/v4"
 	"github.com/soderasen-au/go-common/loggers"
+	"github.com/soderasen-au/go-qlik/qlik/engine"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -153,8 +154,9 @@ func TestExcelPagingPrinter_PrintTotalRecords(t *testing.T) {
 
 	rect := enigma.Rect{Top: 1, Left: 1}
 	totalRows := 150
+	colCount := 10
 
-	resRect, res := printer.printTotalRecords(totalRows, sheetName, rect)
+	resRect, res := printer.printTotalRecords(totalRows, colCount, sheetName, rect)
 
 	if res != nil {
 		t.Fatalf("unexpected error: %v", res)
@@ -162,22 +164,16 @@ func TestExcelPagingPrinter_PrintTotalRecords(t *testing.T) {
 	if resRect.Height != 1 {
 		t.Errorf("expected height=1, got %d", resRect.Height)
 	}
-	if resRect.Width != 2 {
-		t.Errorf("expected width=2, got %d", resRect.Width)
+	if resRect.Width != colCount {
+		t.Errorf("expected width=%d, got %d", colCount, resRect.Width)
 	}
 
-	// Check label cell
-	labelCell, _ := excelize.CoordinatesToCellName(rect.Left, rect.Top)
-	labelValue, _ := excel.GetCellValue(sheetName, labelCell)
-	if labelValue != "Total Records:" {
-		t.Errorf("expected label='Total Records:', got '%s'", labelValue)
-	}
-
-	// Check value cell
-	valueCell, _ := excelize.CoordinatesToCellName(rect.Left+1, rect.Top)
-	valueStr, _ := excel.GetCellValue(sheetName, valueCell)
-	if valueStr != "150" {
-		t.Errorf("expected value='150', got '%s'", valueStr)
+	// Check merged cell contains label + value
+	startCell, _ := excelize.CoordinatesToCellName(rect.Left, rect.Top)
+	cellValue, _ := excel.GetCellValue(sheetName, startCell)
+	expected := "Total Records 150"
+	if cellValue != expected {
+		t.Errorf("expected cell='%s', got '%s'", expected, cellValue)
 	}
 }
 
@@ -234,6 +230,7 @@ func TestExcelPagingPrinter_PrintPageSubtotals(t *testing.T) {
 	printer.excel = excel
 	printer.logger = logger
 	printer.report = Report{AllBorders: false}
+	printer.layout = &engine.ObjectLayoutEx{}
 
 	rect := enigma.Rect{Top: 1, Left: 1}
 	subtotals := []float64{0, 100.5, 200.25, 0}
