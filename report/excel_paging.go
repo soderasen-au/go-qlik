@@ -100,15 +100,6 @@ func (p *ExcelPagingPrinter) printHorizontalSelection(sheet string, rect enigma.
 	resRect.Height = 0
 	resRect.Width = 0
 
-	selObj, res := engine.GetCurrentSelection(p.doc, "$")
-	if res != nil {
-		return nil, res.With("GetCurrentSelection")
-	}
-
-	if len(selObj.Selections) == 0 {
-		return &resRect, nil
-	}
-
 	// Get dimension label mapping
 	dimFieldMap := make(map[string]string)
 	dimLabelMap := make(map[string]string)
@@ -130,53 +121,71 @@ func (p *ExcelPagingPrinter) printHorizontalSelection(sheet string, rect enigma.
 		}
 	}
 
+	selections := make(map[string][]*enigma.NxCurrentSelectionItem)
+	for state := range p.report.SelectedStates {
+		selObj, res := engine.GetCurrentSelection(p.doc, state)
+		if res != nil {
+			return nil, res.With("GetCurrentSelection " + state)
+		}
+		selections[state] = selObj.Selections
+	}
+	if len(selections) == 0 {
+		return &resRect, nil
+	}
+
 	// Sort selections by order
-	selections := selObj.Selections
-	sort.SliceStable(selections, func(i, j int) bool {
-		order1, ok := p.report.CurrentSelectionOrder[selections[i].Field]
-		if !ok {
-			return false
-		}
-		order2, ok := p.report.CurrentSelectionOrder[selections[j].Field]
-		if !ok {
-			return true
-		}
-		return order1 < order2
-	})
+	for state, sels := range selections {
+		logger.Debug().Msgf("state %s has %d selections", state, len(sels))
+		sort.SliceStable(sels, func(i, j int) bool {
+			order1, ok := p.report.CurrentSelectionOrder[sels[i].Field]
+			if !ok {
+				return false
+			}
+			order2, ok := p.report.CurrentSelectionOrder[sels[j].Field]
+			if !ok {
+				return true
+			}
+			return order1 < order2
+		})
+	}
 
 	// Filter hidden fields and map names
 	type selectionItem struct {
+		state  string
 		name   string
 		values string
 	}
 	items := make([]selectionItem, 0)
 
-	for _, sel := range selections {
-		fname := sel.Field
-		isHidden := false
-		listObj, res := engine.GetListObject(p.doc, "$", fname)
-		if res == nil {
-			for _, tag := range listObj.DimensionInfo.Tags {
-				if tag == "$hidden" {
-					isHidden = true
-					break
+	for state, sels := range selections {
+		logger.Debug().Msgf("processing selections for state %s", state)
+		for _, sel := range sels {
+			fname := sel.Field
+			isHidden := false
+			listObj, res := engine.GetListObject(p.doc, state, fname)
+			if res == nil {
+				for _, tag := range listObj.DimensionInfo.Tags {
+					if tag == "$hidden" {
+						isHidden = true
+						break
+					}
 				}
 			}
-		}
-		if isHidden {
-			continue
-		}
-
-		// Map field name
-		if strings.HasPrefix(fname, "=") {
-			if dname, ok := dimLabelMap[fname]; ok {
-				fname = dname
+			if isHidden {
+				continue
 			}
-		} else if mappedName, ok := dimFieldMap[fname]; ok {
-			fname = mappedName
-		}
 
-		items = append(items, selectionItem{name: fname, values: sel.Selected})
+			// Map field name
+			if strings.HasPrefix(fname, "=") {
+				if dname, ok := dimLabelMap[fname]; ok {
+					fname = dname
+				}
+			} else if mappedName, ok := dimFieldMap[fname]; ok {
+				fname = mappedName
+			}
+
+			items = append(items, selectionItem{state: state, name: fname, values: sel.Selected})
+		}
 	}
 
 	if len(items) == 0 {

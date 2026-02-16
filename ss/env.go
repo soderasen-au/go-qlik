@@ -15,17 +15,18 @@ import (
 )
 
 type ExecEnv struct {
-	EngineConn *engine.Conn
-	Doc        *enigma.Doc
-	QrsClient  *qrs.Client
-	AppID      string
-	Log        *zerolog.Logger `json:"-"`
-	bmMap      map[string]string
-	csOrder    map[string]int
-	dims       map[string]*engine.SessionDimensionLayout
-	measures   map[string]*engine.SessionMeasureLayout
-	stash      map[string]interface{}
-	DeferTasks []TaskRunner
+	EngineConn     *engine.Conn
+	Doc            *enigma.Doc
+	QrsClient      *qrs.Client
+	AppID          string
+	Log            *zerolog.Logger `json:"-"`
+	bmMap          map[string]string
+	csOrder        map[string]int
+	dims           map[string]*engine.SessionDimensionLayout
+	measures       map[string]*engine.SessionMeasureLayout
+	stash          map[string]interface{}
+	SelectedStates map[string]int
+	DeferTasks     []TaskRunner
 }
 
 type ExecEnvOption func(env *ExecEnv) *ExecEnv
@@ -61,11 +62,11 @@ func NewExecEnv(cfg *engine.Config, appid string, logger *zerolog.Logger, opts .
 	env.csOrder = make(map[string]int)
 	env.stash = make(map[string]interface{})
 	env.DeferTasks = make([]TaskRunner, 0)
+	env.SelectedStates = make(map[string]int)
+	env.SelectedStates["$"] = 0
 
-	if opts != nil {
-		for _, opt := range opts {
-			env = opt(env)
-		}
+	for _, opt := range opts {
+		env = opt(env)
 	}
 
 	return env, nil

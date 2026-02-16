@@ -30,6 +30,7 @@ func (t *SelectTask) Run() *util.Result {
 		return util.OK(t.Name)
 	}
 
+	t.Script.Env.SelectedStates[t.StateName] = t.Script.Env.SelectedStates[t.StateName] + 1
 	field, err := t.Script.Env.Doc.GetField(engine.ConnCtx, t.FieldName, t.StateName)
 	if err != nil {
 		return util.Error(t.Name+"::GetField", err)

@@ -149,10 +149,11 @@ type Report struct {
 	// `TargetIDs` contains either:
 	//  - array of object ids, when `Target` is `objects`
 	//  - or TargetIDs[0] = sheetID, when `Target` is `sheet`
-	Doc       *enigma.Doc `json:"-,omitempty" yaml:"-,omitempty" bson:"-,omitempty"`
-	AppId     string      `json:"app_id,omitempty" yaml:"app_id,omitempty" bson:"app_id,omitempty"`
-	Target    string      `json:"target,omitempty" yaml:"target,omitempty" bson:"target,omitempty"`
-	TargetIDs []string    `json:"target_ids,omitempty" yaml:"target_ids,omitempty" bson:"target_ids,omitempty"`
+	Doc            *enigma.Doc    `json:"-,omitempty" yaml:"-,omitempty" bson:"-,omitempty"` // not for end user;
+	SelectedStates map[string]int `json:"-,omitempty" yaml:"-,omitempty" bson:"-,omitempty"` // not for end user; used to track the order of selection for each state, which is needed when printing current selection in report
+	AppId          string         `json:"app_id,omitempty" yaml:"app_id,omitempty" bson:"app_id,omitempty"`
+	Target         string         `json:"target,omitempty" yaml:"target,omitempty" bson:"target,omitempty"`
+	TargetIDs      []string       `json:"target_ids,omitempty" yaml:"target_ids,omitempty" bson:"target_ids,omitempty"`
 
 	// layout
 	Headers                []CustomHeader                `json:"headers,omitempty" yaml:"headers,omitempty" bson:"headers,omitempty"`

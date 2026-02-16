@@ -47,6 +47,7 @@ func (t *ReportTask) Run() *util.Result {
 			return res.LogWith(t.Logger, "Script.Env.OpenDoc")
 		}
 	}
+	t.Report.SelectedStates = t.Script.Env.SelectedStates
 	t.Report.Doc = t.Script.Env.Doc
 
 	if res := t.Report.Validate(); res != nil {
