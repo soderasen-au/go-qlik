@@ -316,6 +316,14 @@ func (p *ExcelPagingPrinter) printColumnNumbers(colCount int, sheet string, rect
 		Font:      &excelize.Font{Italic: true},
 		Alignment: &excelize.Alignment{Horizontal: "center"},
 	}
+	if p.report.AllBorders {
+		numStyle.Border = []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		}
+	}
 	styleId, _ := p.excel.NewStyle(numStyle)
 
 	for ci := 0; ci < colCount; ci++ {
@@ -473,6 +481,7 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 	p.layout.ColumnInfos = make([]*engine.ColumnInfo, 0)
 	p.cube2report = make(map[int]int)
 	ColCnt := 0
+	colHeaderStyles := make(map[int]int) // per-column style IDs for groupTableHeader
 
 	boldStyle := &excelize.Style{
 		Font:      &excelize.Font{Bold: true},
@@ -536,6 +545,19 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 		p.excel.SetCellStr(sheet, cellName, cellText)
 		if pHeaderFmt != nil {
 			headerStyle := *boldStyle
+			if headerStyle.Font == nil {
+				headerStyle.Font = &excelize.Font{Bold: true}
+			} else {
+				fontCopy := *headerStyle.Font
+				headerStyle.Font = &fontCopy
+			}
+			if pHeaderFmt.FontSize > 0 {
+				headerStyle.Font.Size = pHeaderFmt.FontSize
+			}
+			if pHeaderFmt.Bold {
+				headerStyle.Font.Bold = true
+			}
+
 			logger.Debug().Msgf("bg color: %s", pHeaderFmt.BgColor)
 			bgColor, res := NewARGBFromQlikColor(pHeaderFmt.BgColor)
 			if res != nil {
@@ -557,8 +579,10 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 			}
 			headerStyleId, _ := p.excel.NewStyle(&headerStyle)
 			p.excel.SetCellStyle(sheet, cellName, cellName, headerStyleId)
+			colHeaderStyles[repIdx] = headerStyleId
 		} else {
 			p.excel.SetCellStyle(sheet, cellName, cellName, styleId)
+			colHeaderStyles[repIdx] = styleId
 		}
 
 		// Set column width
@@ -627,7 +651,7 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 	}
 
 	// Group table headers according to HeaderGroups configuration
-	if res := p.groupTableHeader(sheet, rect, ColCnt, styleId); res != nil {
+	if res := p.groupTableHeader(sheet, rect, ColCnt, styleId, colHeaderStyles); res != nil {
 		return nil, res.With("groupTableHeader")
 	}
 
@@ -635,7 +659,7 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 }
 
 // groupTableHeader merges table headers into groups according to HeaderGroups configuration
-func (p *ExcelPagingPrinter) groupTableHeader(sheet string, rect enigma.Rect, colCount int, styleId int) *util.Result {
+func (p *ExcelPagingPrinter) groupTableHeader(sheet string, rect enigma.Rect, colCount int, styleId int, colHeaderStyles map[int]int) *util.Result {
 	logger := p.logger.With().Str("print", "groupTableHeader").Logger()
 
 	if len(p.Config.HeaderGroups) == 0 {
@@ -676,7 +700,11 @@ func (p *ExcelPagingPrinter) groupTableHeader(sheet string, rect enigma.Rect, co
 			}
 
 			p.excel.SetCellStr(sheet, cell1stRow, headerText)
-			p.excel.SetCellStyle(sheet, cell1stRow, cell1stRow, styleId)
+			colStyle := styleId
+			if cs, ok := colHeaderStyles[col]; ok {
+				colStyle = cs
+			}
+			p.excel.SetCellStyle(sheet, cell1stRow, cell1stRow, colStyle)
 			logger.Debug().Msgf("merged non-group column %d: %s", col, headerText)
 		}
 	}

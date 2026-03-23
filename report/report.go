@@ -107,6 +107,7 @@ type ColumnHeaderFormat struct {
 	TableName        string  `json:"table_name"`
 	SrcFieldName     string  `json:"src_field_name"`
 	Width            float64 `json:"width,omitempty"`
+	FontSize         float64 `json:"font_size,omitempty"`
 	DisableSubtotals bool    `json:"disable_subtotals,omitempty"`
 }
 
