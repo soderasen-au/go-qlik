@@ -740,7 +740,11 @@ func (p *ExcelPagingPrinter) groupTableHeader(sheet string, rect enigma.Rect, co
 		}
 
 		p.excel.SetCellStr(sheet, startCell, group.Name)
-		p.excel.SetCellStyle(sheet, startCell, endCell, styleId)
+		colStyle := styleId
+		if cs, ok := colHeaderStyles[group.Start]; ok {
+			colStyle = cs
+		}
+		p.excel.SetCellStyle(sheet, startCell, endCell, colStyle)
 		logger.Debug().Msgf("merged group [%d:%d] with name: %s", group.Start, endCol, group.Name)
 	}
 
