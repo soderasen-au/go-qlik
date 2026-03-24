@@ -54,7 +54,11 @@ func (c ARGBColor) AssignBgStyle(excelStyle *excelize.Style) {
 		d = 0
 	}
 	textCode := fmt.Sprintf("#%02X%02X%02X", d, d, d)
-	excelStyle.Font = &excelize.Font{Color: textCode}
+	if excelStyle.Font == nil {
+		excelStyle.Font = &excelize.Font{Color: textCode}
+	} else {
+		excelStyle.Font.Color = textCode
+	}
 }
 
 func (c ARGBColor) AssignLuminanceFont(excelStyle *excelize.Style) {
@@ -64,12 +68,20 @@ func (c ARGBColor) AssignLuminanceFont(excelStyle *excelize.Style) {
 		d = 0
 	}
 	textCode := fmt.Sprintf("#%02X%02X%02X", d, d, d)
-	excelStyle.Font = &excelize.Font{Color: textCode}
+	if excelStyle.Font == nil {
+		excelStyle.Font = &excelize.Font{Color: textCode}
+	} else {
+		excelStyle.Font.Color = textCode
+	}
 }
 
 func (c ARGBColor) AssignFontStyle(excelStyle *excelize.Style) {
 	textCode := fmt.Sprintf("#%02X%02X%02X", c.R, c.G, c.B)
-	excelStyle.Font = &excelize.Font{Color: textCode}
+	if excelStyle.Font == nil {
+		excelStyle.Font = &excelize.Font{Color: textCode}
+	} else {
+		excelStyle.Font.Color = textCode
+	}
 }
 
 func NewARGBFromQlikColor(t string) (*ARGBColor, *util.Result) {
