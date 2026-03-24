@@ -554,8 +554,8 @@ func (p *ExcelPagingPrinter) printTableHeader(sheet string, rect enigma.Rect) (*
 			if pHeaderFmt.FontSize > 0 {
 				headerStyle.Font.Size = pHeaderFmt.FontSize
 			}
-			if pHeaderFmt.Bold {
-				headerStyle.Font.Bold = true
+			if !pHeaderFmt.Bold {
+				headerStyle.Font.Bold = false
 			}
 
 			logger.Debug().Msgf("bg color: %s", pHeaderFmt.BgColor)
