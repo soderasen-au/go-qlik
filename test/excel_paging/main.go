@@ -124,6 +124,8 @@ func main() {
 			// {Name: "Product Information", Start: 0, Length: 2},
 			{Name: "Sales Metrics", Start: 2, Length: 3},
 		},
+		PageSize:        26,
+		PageOrientation: report.PDF_ORIENTATION_LANDSCAPE,
 	}
 
 	// If title is set, use it as the report name for the filename

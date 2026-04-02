@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(firewall-cmd --info-zone=libvirt)",
+      "Read(//var/lib/libvirt/dnsmasq/**)",
+      "Bash(journalctl -u virtnetworkd -n 50 --no-pager)",
+      "Bash(journalctl -t dnsmasq -n 80 --no-pager)",
+      "Bash(journalctl -n 200 --no-pager)",
+      "Bash(journalctl -n 500 --no-pager --since \"20 minutes ago\")",
+      "Read(//usr/sbin/**)",
+      "Bash(systemctl cat:*)",
+      "Bash(journalctl -u virtnetworkd --no-pager --since \"30 minutes ago\")",
+      "Bash(journalctl -u virtnetworkd --no-pager)",
+      "Bash(journalctl --no-pager -n 100)",
+      "Read(//sys/kernel/security/apparmor/**)",
+      "Bash(aa-status)",
+      "Bash(ip route:*)",
+      "Bash(firewall-cmd --zone=libvirt --list-rich-rules)",
+      "Bash(firewall-cmd --zone=libvirt --query-forward)",
+      "Bash(firewall-cmd --list-all-zones)",
+      "Read(//usr/lib/firewalld/zones/**)",
+      "Bash(firewall-cmd --get-default-zone)",
+      "Bash(firewall-cmd --zone=public --list-interfaces)",
+      "Bash(echo \"public masquerade exit: $?\")",
+      "Bash(sudo firewall-cmd:*)"
+    ]
+  }
+}
