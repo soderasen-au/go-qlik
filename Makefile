@@ -97,9 +97,9 @@ compare-pdf: test-pdf deps-python
 test-excel-paging: build-excel-paging
 	@echo "Generating paginated Excel report..."
 	@mkdir -p test-reports
-	@echo "  - Generating paginated report with 10 rows per page..."
-	@./bin/excel_paging -rows-per-page 10 -title "TestPaginatedReport" \
-		-show-col-nums -show-subtotals -all-borders \
+	@echo "  - Generating paginated report with 100 rows per page..."
+	@./bin/excel_paging -rows-per-page 100 -title "TestPaginatedReport" \
+		-show-col-nums -show-subtotals -all-borders -output-selection \
 		-name "TestPaginatedReport" -output-folder test-reports \
 		-certs-path test/certs/sa-win2k25
 	@echo "✓ Paginated report generated in test-reports/"

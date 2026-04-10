@@ -198,7 +198,19 @@ func (p *ExcelPagingPrinter) printHorizontalSelection(sheet string, rect enigma.
 		return nil, util.Error("CoordinatesToCellName", err)
 	}
 	p.excel.SetCellStr(sheet, titleCellName, "Current Selection")
-	boldStyle := &excelize.Style{Font: &excelize.Font{Bold: true}, Border: []excelize.Border{{Type: "bottom", Color: "000000", Style: 1}}}
+	boldStyle := &excelize.Style{
+		Font:      &excelize.Font{Bold: true},
+		Alignment: &excelize.Alignment{WrapText: true},
+		Border:    []excelize.Border{{Type: "bottom", Color: "000000", Style: 1}},
+	}
+	if p.report.AllBorders {
+		boldStyle.Border = []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		}
+	}
 	styleId, _ := p.excel.NewStyle(boldStyle)
 	p.excel.SetCellStyle(sheet, titleCellName, titleCellName, styleId)
 
@@ -218,6 +230,18 @@ func (p *ExcelPagingPrinter) printHorizontalSelection(sheet string, rect enigma.
 	}
 
 	// Print field values row
+	valueStyle := &excelize.Style{
+		Alignment: &excelize.Alignment{WrapText: true},
+	}
+	if p.report.AllBorders {
+		valueStyle.Border = []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+		}
+	}
+	valueStyleId, _ := p.excel.NewStyle(valueStyle)
 	for ci, item := range items {
 		cellName, err := excelize.CoordinatesToCellName(c0+ci, r0+1)
 		if err != nil {
@@ -226,6 +250,7 @@ func (p *ExcelPagingPrinter) printHorizontalSelection(sheet string, rect enigma.
 		}
 		logger.Debug().Msgf("print field value cell[%s]: %s", cellName, item.values)
 		p.excel.SetCellStr(sheet, cellName, item.values)
+		p.excel.SetCellStyle(sheet, cellName, cellName, valueStyleId)
 	}
 
 	resRect.Height = 3 // title + field names + field values

@@ -67,6 +67,26 @@
             ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "mkdir-test-reports"
+        },
+        {
+            "name": "Debug test-excel-paging",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/test/excel_paging",
+            "args": [
+                "-rows-per-page", "100",
+                "-title", "TestPaginatedReport",
+                "-show-col-nums",
+                "-show-subtotals",
+                "-all-borders",
+                "-output-selection",
+                "-name", "TestPaginatedReport",
+                "-output-folder", "test-reports",
+                "-certs-path", "test/certs/sa-win2k25"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "mkdir-test-reports"
         }
     ]
 }

@@ -154,6 +154,7 @@ func main() {
 		Logger:                 logger,
 	}
 
+	r.SelectedStates = map[string]int{"$": 0}
 	res := printer.Print(r)
 	if res != nil {
 		logger.Err(res).Msg("Print")
